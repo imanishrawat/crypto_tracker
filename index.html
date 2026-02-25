@@ -18,7 +18,6 @@
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
-        .nav-btns { display: flex; gap: 10px; align-items: center; }
         .theme-toggle { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
 
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
@@ -31,16 +30,13 @@
 
         .dashboard-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); }
-        table { width: 100%; border-collapse: collapse; min-width: 1050px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1100px; }
         th { background: rgba(0,0,0,0.05); padding: 12px; font-size: 10px; text-transform: uppercase; cursor: pointer; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
         
         .asset-cell { display: flex; align-items: center; gap: 10px; }
-        .asset-logo { width: 24px; height: 24px; border-radius: 50%; }
-        .asset-info { display: flex; flex-direction: column; }
+        .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
         .asset-symbol { font-size: 11px; color: #888; text-transform: uppercase; }
-
-        .chart-container { background: rgba(0,0,0,0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
 
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
@@ -49,7 +45,7 @@
         .card { padding: 15px; background: rgba(0,0,0,0.03); border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .card span { font-size: 11px; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
 
-        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
+        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; margin-right: 10px; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-weight: bold; }
 
         @media (max-width: 1000px) { .dashboard-grid { grid-template-columns: 1fr; } }
@@ -59,12 +55,11 @@
 
 <div class="container">
     <div class="header-flex">
-        <h1>📈 Portfolio</h1>
-        <div class="nav-btns">
+        <h1>📈 Portfolio Manager</h1>
+        <div style="display:flex; gap:10px; align-items:center;">
             <select id="currencySelector" onchange="changeCurrency()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
-                <option value="eur">EUR (€)</option>
                 <option value="inr">INR (₹)</option>
             </select>
             <button class="theme-toggle" onclick="toggleTheme()">🌓 Mode</button>
@@ -74,11 +69,11 @@
     <input type="hidden" id="editIndex" value="-1">
 
     <div class="form-grid">
-        <input type="text" id="coinId" list="coinList" placeholder="Asset (e.g. bitcoin)">
+        <input type="text" id="coinId" list="coinList" placeholder="Asset ID (e.g. bitcoin)">
         <datalist id="coinList"></datalist>
         <input type="date" id="tradeDate">
-        <input type="number" id="holdings" placeholder="Order Amount">
-        <input type="number" id="buyPrice" placeholder="Avg Buy Price">
+        <input type="number" id="holdings" placeholder="Qty (Filled)">
+        <input type="number" id="buyPrice" placeholder="Buy Price">
         <div style="display:flex; gap:5px;">
             <button class="btn btn-add" id="submitBtn" onclick="saveTrade()">Add Trade</button>
             <button class="btn" id="cancelBtn" onclick="resetForm()" style="display:none; background:#6c757d;">Cancel</button>
@@ -89,7 +84,7 @@
         <input type="text" id="searchInput" style="width:100%; margin-bottom:10px;" placeholder="🔍 Search assets..." onkeyup="render()">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn" style="background:#6c757d; font-size:11px;" onclick="exportCSV()">📤 Export</button>
-            <button class="btn" style="background:#6c757d; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance CSV</button>
+            <button class="btn" style="background:#0064e6; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance CSV</button>
             <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
             <label style="font-size:12px; align-self:center;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
         </div>
@@ -101,12 +96,12 @@
                 <thead>
                     <tr>
                         <th onclick="setSort('id')">Asset</th>
-                        <th id="priceHead">Price (USD)</th>
+                        <th id="priceHead">Price</th>
                         <th onclick="setSort('date')">Date</th>
-                        <th onclick="setSort('amount')">Holdings</th>
-                        <th id="buyHead">Avg Buy (USD)</th>
-                        <th id="investHead">Invested (USD)</th>
-                        <th id="pnlHead">PnL (USD)</th>
+                        <th onclick="setSort('amount')">Qty</th>
+                        <th id="buyHead">Buy Price</th>
+                        <th id="investHead">Invested</th>
+                        <th id="pnlHead">PnL</th>
                         <th>PnL (%)</th>
                         <th>Actions</th>
                     </tr>
@@ -120,18 +115,25 @@
     <div class="summary-grid">
         <div class="card"><span>Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Value</span><strong id="totalValue">0</strong></div>
-        <div class="card"><span>Net PnL</span><strong id="totalPnL">0</strong></div>
+        <div class="card"><span>Profit/Loss</span><strong id="totalPnL">0</strong></div>
     </div>
 </div>
 
 <script>
-    let trades = JSON.parse(localStorage.getItem('crypto_global_v12')) || [];
-    let coinData = {}; // Cache for logos/symbols
+    let trades = JSON.parse(localStorage.getItem('crypto_global_v13')) || [];
+    let coinMeta = {}; 
     let sortKey = 'id', sortAsc = true, myChart = null;
-    let currentCurrency = 'usd';
-    let lastCurrency = 'usd';
+    let curSym = '$';
 
-    const curMap = { usd: '$', aed: 'د.إ', eur: '€', inr: '₹' };
+    const curMap = { usd: '$', aed: 'د.إ', inr: '₹' };
+
+    const binanceMap = {
+        'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple', 
+        'BNB': 'binancecoin', 'ADA': 'cardano', 'DOT': 'polkadot', 
+        'AVAX': 'avalanche-2', 'LINK': 'chainlink', 'ARB': 'arbitrum', 
+        'POL': 'polygon-ecosystem-token', 'QNT': 'quant', 
+        'HBAR': 'hedera-hashgraph', 'XLM': 'stellar'
+    };
 
     function toggleTheme() {
         const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -139,45 +141,27 @@
         render();
     }
 
-    async function loadCoinList() {
+    async function loadCoinData() {
         try {
-            const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false');
+            const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1');
             const data = await res.json();
             const dl = document.getElementById('coinList');
             data.forEach(c => {
-                coinData[c.id] = { logo: c.image, symbol: c.symbol.toUpperCase() };
+                coinMeta[c.id] = { logo: c.image, symbol: c.symbol };
                 let o = document.createElement('option'); o.value = c.id; dl.appendChild(o);
             });
         } catch(e) {}
     }
 
-    // Fix: Dynamic Currency Conversion for Buy Prices
-    async function changeCurrency() {
-        const nextCur = document.getElementById('currencySelector').value;
-        if (nextCur === lastCurrency) return;
-
-        try {
-            // Get conversion rate between last and next currency
-            const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=usd&vs_currencies=${nextCur}`);
-            const data = await res.json();
-            const rate = data.usd[nextCur];
-
-            // If moving from USD to AED, rate is ~3.67. If moving from AED back to USD, we need the inverse.
-            // Simplified: Convert all buyPrices to USD first, then to target currency.
-            // For now, let's assume all user entries are relative to the current active currency.
-            
-            lastCurrency = nextCur;
-            updateHeaders(nextCur);
-            fetchPrices();
-        } catch(e) { alert("Currency conversion failed"); }
-    }
-
-    function updateHeaders(cur) {
+    function changeCurrency() {
+        const cur = document.getElementById('currencySelector').value;
+        curSym = curMap[cur];
         const label = cur.toUpperCase();
         document.getElementById('priceHead').innerText = `Price (${label})`;
-        document.getElementById('buyHead').innerText = `Avg Buy (${label})`;
+        document.getElementById('buyHead').innerText = `Buy Price (${label})`;
         document.getElementById('investHead').innerText = `Invested (${label})`;
         document.getElementById('pnlHead').innerText = `PnL (${label})`;
+        fetchPrices();
     }
 
     function saveTrade() {
@@ -188,44 +172,34 @@
         const editIdx = parseInt(document.getElementById('editIndex').value);
 
         if (!id || isNaN(amount)) return;
-        const tradeData = { id, date, amount, buyPrice, currentPrice: 0 };
+        
+        const data = { id, date, amount, buyPrice, currentPrice: 0 };
+        if (editIdx > -1) trades[editIdx] = data;
+        else trades.push(data);
 
-        if (editIdx > -1) trades[editIdx] = tradeData;
-        else trades.push(tradeData);
-
-        saveToLocal(); resetForm(); fetchPrices();
+        localStorage.setItem('crypto_global_v13', JSON.stringify(trades));
+        resetForm(); fetchPrices();
     }
 
-    function editTrade(index) {
-        const t = trades[index];
+    function editTrade(idx) {
+        const t = trades[idx];
         document.getElementById('coinId').value = t.id;
         document.getElementById('tradeDate').value = t.date;
         document.getElementById('holdings').value = t.amount;
         document.getElementById('buyPrice').value = t.buyPrice;
-        document.getElementById('editIndex').value = index;
-        document.getElementById('submitBtn').innerText = "Update Trade";
+        document.getElementById('editIndex').value = idx;
+        document.getElementById('submitBtn').innerText = "Update";
         document.getElementById('cancelBtn').style.display = "block";
-    }
-
-    function removeTrade(id, index) {
-        if (confirm(`Are you sure you want to delete ${id}?`)) {
-            if (index === -1) trades = trades.filter(t => t.id !== id);
-            else trades.splice(index, 1);
-            saveToLocal(); render();
-        }
     }
 
     function resetForm() {
         document.getElementById('coinId').value = '';
-        document.getElementById('tradeDate').value = '';
         document.getElementById('holdings').value = '';
         document.getElementById('buyPrice').value = '';
         document.getElementById('editIndex').value = "-1";
         document.getElementById('submitBtn').innerText = "Add Trade";
         document.getElementById('cancelBtn').style.display = "none";
     }
-
-    function saveToLocal() { localStorage.setItem('crypto_global_v12', JSON.stringify(trades)); }
 
     async function fetchPrices() {
         const ids = [...new Set(trades.map(t => t.id))].join(',');
@@ -239,11 +213,38 @@
         } catch(e) {}
     }
 
+    // 📥 FIXED: Precise Binance CSV Importer
+    function importCSV(e) {
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            const rows = f.target.result.split('\n');
+            const header = rows[0].split('\t'); // Binance usually uses tabs in text-copy or commas in export
+            
+            // Define expected indices based on your requirement
+            const dateIdx = 0, pairIdx = 2, baseIdx = 3, typeIdx = 5, priceIdx = 8, amountIdx = 9;
+
+            rows.slice(1).forEach(row => {
+                const cols = row.split('\t');
+                if (cols.length > 10 && cols[typeIdx] === 'BUY') {
+                    const symbol = cols[baseIdx].trim();
+                    trades.push({
+                        id: binanceMap[symbol] || symbol.toLowerCase(),
+                        date: cols[dateIdx].split(' ')[0],
+                        amount: parseFloat(cols[amountIdx]),
+                        buyPrice: parseFloat(cols[priceIdx]),
+                        currentPrice: 0
+                    });
+                }
+            });
+            localStorage.setItem('crypto_global_v13', JSON.stringify(trades));
+            fetchPrices();
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
     function render() {
         const isGrouped = document.getElementById('groupToggle').checked;
         const search = document.getElementById('searchInput').value.toLowerCase();
-        const cur = document.getElementById('currencySelector').value;
-        const sym = curMap[cur];
         let displayData = [];
 
         if (isGrouped) {
@@ -274,48 +275,44 @@
             tInv += d.invested; tVal += d.currentValue;
             cLabels.push(d.id); cValues.push(d.currentValue);
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
-            const coin = coinData[d.id] || { logo: 'https://cdn-icons-png.flaticon.com/512/2584/2584681.png', symbol: '???' };
+            const meta = coinMeta[d.id] || { logo: '', symbol: '' };
 
             tbody.innerHTML += `<tr>
                 <td>
                     <div class="asset-cell">
-                        <img src="${coin.logo}" class="asset-logo">
-                        <div class="asset-info">
-                            <span style="font-weight:bold; text-transform:capitalize;">${d.id}</span>
-                            <span class="asset-symbol">${coin.symbol}</span>
+                        <img src="${meta.logo}" class="asset-logo">
+                        <div style="display:flex; flex-direction:column">
+                            <span style="font-weight:bold; text-transform:capitalize">${d.id}</span>
+                            <span class="asset-symbol">${meta.symbol}</span>
                         </div>
                     </div>
                 </td>
-                <td>${sym}${(d.currentPrice||0).toLocaleString()}</td>
+                <td>${curSym}${(d.currentPrice||0).toLocaleString()}</td>
                 <td>${d.date}</td>
                 <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${d.buyPrice.toLocaleString(undefined,{maximumFractionDigits:4})}</td>
-                <td>${sym}${d.invested.toLocaleString()}</td>
-                <td class="${pClass}">${sym}${d.pnl.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td class="${pClass}">${d.pnlPercent.toFixed(2)}%</td>
+                <td>${curSym}${d.buyPrice.toLocaleString(undefined,{maximumFractionDigits:4})}</td>
+                <td>${curSym}${d.invested.toLocaleString()}</td>
+                <td class="${pClass}">${curSym}${d.pnl.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                <td class="${pClass}">${(d.pnlPercent || 0).toFixed(2)}%</td>
                 <td>
                     <button class="btn-edit" onclick="editTrade(${isGrouped ? -1 : d.originalIndex})" ${isGrouped ? 'style="display:none"' : ''}>Edit</button>
-                    <button class="btn-remove" onclick="removeTrade('${d.id}', ${isGrouped ? -1 : d.originalIndex})">Delete</button>
+                    <button class="btn-remove" onclick="if(confirm('Delete?')){ trades.splice(${isGrouped ? -1 : d.originalIndex},1); localStorage.setItem('crypto_global_v13', JSON.stringify(trades)); render(); }">Delete</button>
                 </td>
             </tr>`;
         });
 
-        updateChart(cLabels, cValues);
-        document.getElementById('totalInvested').innerText = sym + Math.round(tInv).toLocaleString();
-        document.getElementById('totalValue').innerText = sym + Math.round(tVal).toLocaleString();
-        const pnlTotal = tVal - tInv;
-        document.getElementById('totalPnL').innerText = sym + Math.round(pnlTotal).toLocaleString();
-        document.getElementById('totalPnL').className = pnlTotal >= 0 ? 'profit' : 'loss';
-    }
-
-    function updateChart(labels, values) {
-        const ctx = document.getElementById('allocationChart').getContext('2d');
         if (myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
+        myChart = new Chart(document.getElementById('allocationChart'), {
             type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            data: { labels: cLabels, datasets: [{ data: cValues, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8'], borderWidth: 0 }] },
             options: { plugins: { legend: { display: false } } }
         });
+
+        document.getElementById('totalInvested').innerText = curSym + Math.round(tInv).toLocaleString();
+        document.getElementById('totalValue').innerText = curSym + Math.round(tVal).toLocaleString();
+        const netPnL = tVal - tInv;
+        document.getElementById('totalPnL').innerText = curSym + Math.round(netPnL).toLocaleString();
+        document.getElementById('totalPnL').className = netPnL >= 0 ? 'profit' : 'loss';
     }
 
     function exportCSV() {
@@ -323,19 +320,8 @@
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
     }
 
-    function importCSV(e) {
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            f.target.result.split('\n').slice(1).forEach(l => {
-                const c = l.split(','); if(c.length>=4) trades.push({ id: c[0].trim(), date: c[1], amount: parseFloat(c[2]), buyPrice: parseFloat(c[3]), currentPrice: 0 });
-            });
-            saveToLocal(); fetchPrices();
-        };
-        reader.readAsText(e.target.files[0]);
-    }
-
     setInterval(fetchPrices, 60000);
-    loadCoinList();
+    loadCoinData();
     fetchPrices();
 </script>
 </body>
