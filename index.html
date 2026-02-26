@@ -18,6 +18,7 @@
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .nav-btns { display: flex; gap: 10px; align-items: center; }
         .theme-toggle { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
 
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
@@ -36,6 +37,7 @@
         
         .asset-cell { display: flex; align-items: center; gap: 10px; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
+        .asset-info { display: flex; flex-direction: column; }
         .asset-symbol { font-size: 11px; color: #888; text-transform: uppercase; }
 
         .profit { color: var(--success); font-weight: bold; }
@@ -56,7 +58,7 @@
 <div class="container">
     <div class="header-flex">
         <h1>📈 Portfolio Manager</h1>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div class="nav-btns">
             <select id="currencySelector" onchange="changeCurrency()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
@@ -72,8 +74,8 @@
         <input type="text" id="coinId" list="coinList" placeholder="Asset ID (e.g. bitcoin)">
         <datalist id="coinList"></datalist>
         <input type="date" id="tradeDate">
-        <input type="number" id="holdings" placeholder="Qty (Filled)">
-        <input type="number" id="buyPrice" placeholder="Buy Price">
+        <input type="number" id="holdings" placeholder="Order Amount">
+        <input type="number" id="buyPrice" placeholder="Avg Buy Price">
         <div style="display:flex; gap:5px;">
             <button class="btn btn-add" id="submitBtn" onclick="saveTrade()">Add Trade</button>
             <button class="btn" id="cancelBtn" onclick="resetForm()" style="display:none; background:#6c757d;">Cancel</button>
@@ -96,12 +98,12 @@
                 <thead>
                     <tr>
                         <th onclick="setSort('id')">Asset</th>
-                        <th id="priceHead">Price</th>
+                        <th class="cur-label">Price</th>
                         <th onclick="setSort('date')">Date</th>
                         <th onclick="setSort('amount')">Qty</th>
-                        <th id="buyHead">Buy Price</th>
-                        <th id="investHead">Invested</th>
-                        <th id="pnlHead">PnL</th>
+                        <th class="cur-label">Avg Buy</th>
+                        <th class="cur-label">Invested</th>
+                        <th class="cur-label">PnL</th>
                         <th>PnL (%)</th>
                         <th>Actions</th>
                     </tr>
@@ -115,12 +117,12 @@
     <div class="summary-grid">
         <div class="card"><span>Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Value</span><strong id="totalValue">0</strong></div>
-        <div class="card"><span>Profit/Loss</span><strong id="totalPnL">0</strong></div>
+        <div class="card"><span>Net PnL</span><strong id="totalPnL">0</strong></div>
     </div>
 </div>
 
 <script>
-    let trades = JSON.parse(localStorage.getItem('crypto_global_v13')) || [];
+    let trades = JSON.parse(localStorage.getItem('crypto_global_v14')) || [];
     let coinMeta = {}; 
     let sortKey = 'id', sortAsc = true, myChart = null;
     let curSym = '$';
@@ -147,7 +149,7 @@
             const data = await res.json();
             const dl = document.getElementById('coinList');
             data.forEach(c => {
-                coinMeta[c.id] = { logo: c.image, symbol: c.symbol };
+                coinMeta[c.id] = { logo: c.image, symbol: c.symbol.toUpperCase() };
                 let o = document.createElement('option'); o.value = c.id; dl.appendChild(o);
             });
         } catch(e) {}
@@ -156,11 +158,11 @@
     function changeCurrency() {
         const cur = document.getElementById('currencySelector').value;
         curSym = curMap[cur];
-        const label = cur.toUpperCase();
-        document.getElementById('priceHead').innerText = `Price (${label})`;
-        document.getElementById('buyHead').innerText = `Buy Price (${label})`;
-        document.getElementById('investHead').innerText = `Invested (${label})`;
-        document.getElementById('pnlHead').innerText = `PnL (${label})`;
+        const labels = document.querySelectorAll('.cur-label');
+        labels.forEach(l => {
+            const base = l.innerText.split('(')[0].trim();
+            l.innerText = `${base} (${cur.toUpperCase()})`;
+        });
         fetchPrices();
     }
 
@@ -177,7 +179,7 @@
         if (editIdx > -1) trades[editIdx] = data;
         else trades.push(data);
 
-        localStorage.setItem('crypto_global_v13', JSON.stringify(trades));
+        localStorage.setItem('crypto_global_v14', JSON.stringify(trades));
         resetForm(); fetchPrices();
     }
 
@@ -213,20 +215,26 @@
         } catch(e) {}
     }
 
-    // 📥 FIXED: Precise Binance CSV Importer
+    // 📥 IMPROVED: Logic to process your specific Binance CSV/Excel format
     function importCSV(e) {
         const reader = new FileReader();
         reader.onload = (f) => {
-            const rows = f.target.result.split('\n');
-            const header = rows[0].split('\t'); // Binance usually uses tabs in text-copy or commas in export
-            
-            // Define expected indices based on your requirement
-            const dateIdx = 0, pairIdx = 2, baseIdx = 3, typeIdx = 5, priceIdx = 8, amountIdx = 9;
+            // Clean up CSV content for better parsing
+            const content = f.target.result.replace(/"/g, '').trim();
+            const lines = content.split('\n');
+            const header = lines[0].split(',');
 
-            rows.slice(1).forEach(row => {
-                const cols = row.split('\t');
-                if (cols.length > 10 && cols[typeIdx] === 'BUY') {
-                    const symbol = cols[baseIdx].trim();
+            // Locate required Binance columns dynamically
+            const dateIdx = header.findIndex(h => h.includes('Date'));
+            const assetIdx = header.findIndex(h => h.includes('Base Asset'));
+            const typeIdx = header.findIndex(h => h.includes('Type'));
+            const priceIdx = header.findIndex(h => h.includes('AvgTrading Price') || h.includes('Price'));
+            const amountIdx = header.findIndex(h => h.includes('Filled') || h.includes('Order Amount'));
+
+            lines.slice(1).forEach(line => {
+                const cols = line.split(',');
+                if (cols.length > 5 && cols[typeIdx].includes('BUY')) {
+                    const symbol = cols[assetIdx].trim();
                     trades.push({
                         id: binanceMap[symbol] || symbol.toLowerCase(),
                         date: cols[dateIdx].split(' ')[0],
@@ -236,7 +244,7 @@
                     });
                 }
             });
-            localStorage.setItem('crypto_global_v13', JSON.stringify(trades));
+            localStorage.setItem('crypto_global_v14', JSON.stringify(trades));
             fetchPrices();
         };
         reader.readAsText(e.target.files[0]);
@@ -275,13 +283,13 @@
             tInv += d.invested; tVal += d.currentValue;
             cLabels.push(d.id); cValues.push(d.currentValue);
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
-            const meta = coinMeta[d.id] || { logo: '', symbol: '' };
+            const meta = coinMeta[d.id] || { logo: '', symbol: '???' };
 
             tbody.innerHTML += `<tr>
                 <td>
                     <div class="asset-cell">
-                        <img src="${meta.logo}" class="asset-logo">
-                        <div style="display:flex; flex-direction:column">
+                        <img src="${meta.logo}" class="asset-logo" onerror="this.style.display='none'">
+                        <div class="asset-info">
                             <span style="font-weight:bold; text-transform:capitalize">${d.id}</span>
                             <span class="asset-symbol">${meta.symbol}</span>
                         </div>
@@ -292,11 +300,11 @@
                 <td>${d.amount.toLocaleString()}</td>
                 <td>${curSym}${d.buyPrice.toLocaleString(undefined,{maximumFractionDigits:4})}</td>
                 <td>${curSym}${d.invested.toLocaleString()}</td>
-                <td class="${pClass}">${curSym}${d.pnl.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                <td class="${pClass}">${curSym}${d.pnl.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 <td class="${pClass}">${(d.pnlPercent || 0).toFixed(2)}%</td>
                 <td>
                     <button class="btn-edit" onclick="editTrade(${isGrouped ? -1 : d.originalIndex})" ${isGrouped ? 'style="display:none"' : ''}>Edit</button>
-                    <button class="btn-remove" onclick="if(confirm('Delete?')){ trades.splice(${isGrouped ? -1 : d.originalIndex},1); localStorage.setItem('crypto_global_v13', JSON.stringify(trades)); render(); }">Delete</button>
+                    <button class="btn-remove" onclick="if(confirm('Delete this trade?')){ trades.splice(${isGrouped ? -1 : d.originalIndex}, 1); localStorage.setItem('crypto_global_v14', JSON.stringify(trades)); render(); }">Delete</button>
                 </td>
             </tr>`;
         });
@@ -317,12 +325,12 @@
 
     function exportCSV() {
         let csv = "Asset,Date,Holdings,BuyPriceUnit\n" + trades.map(t => `${t.id},${t.date},${t.amount},${t.buyPrice}`).join('\n');
-        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
+        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
     }
 
     setInterval(fetchPrices, 60000);
     loadCoinData();
-    fetchPrices();
+    changeCurrency(); // Initialize headers
 </script>
 </body>
 </html>
