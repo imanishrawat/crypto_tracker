@@ -125,7 +125,6 @@
     let sortKey = 'id', sortAsc = true, myChart = null;
     const curMap = { usd: '$', eur: '€', inr: '₹' };
 
-    // CoinGecko IDs map for Binance Symbols
     const symbolToId = {
         'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple', 
         'BNB': 'binancecoin', 'ADA': 'cardano', 'DOT': 'polkadot', 
@@ -278,36 +277,53 @@
         saveToLocal(); render();
     }
 
-    // 📥 New Logic: Specific Binance CSV Importer
+    // 📥 Updated Logic: Overwrite or Append Prompt for CSV Import
     function importCSV(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (f) => {
             const rows = f.target.result.split('\n');
+            if (rows.length < 2) return alert("Invalid CSV file.");
+
+            // ASK USER FOR MODE
+            const mode = confirm("Do you want to OVERWRITE your existing portfolio?\n\nClick 'OK' to Clear All and Start Fresh.\nClick 'Cancel' to keep existing trades and Add New ones.");
+
+            if (mode === true) {
+                trades = []; // User chose OK -> Clear existing
+            }
+
             const header = rows[0].split(',');
             
-            // Map the Binance column positions
             const dateIdx = header.findIndex(h => h.includes('Date'));
             const baseAssetIdx = header.findIndex(h => h.includes('Base Asset'));
             const amountIdx = header.findIndex(h => h.includes('Filled'));
             const priceIdx = header.findIndex(h => h.includes('AvgTrading Price'));
             const typeIdx = header.findIndex(h => h.includes('Type'));
 
+            let importedCount = 0;
             rows.slice(1).forEach(row => {
                 const cols = row.split(',');
-                if(cols.length > 5 && cols[typeIdx].includes('BUY')) {
+                if(cols.length > 5 && cols[typeIdx] && cols[typeIdx].includes('BUY')) {
                     const symbol = cols[baseAssetIdx].trim();
                     trades.push({
                         id: symbolToId[symbol] || symbol.toLowerCase(),
-                        date: cols[dateIdx].split(' ')[0],
-                        amount: parseFloat(cols[amountIdx]),
-                        buyPrice: parseFloat(cols[priceIdx]),
+                        date: cols[dateIdx] ? cols[dateIdx].split(' ')[0] : new Date().toISOString().split('T')[0],
+                        amount: parseFloat(cols[amountIdx]) || 0,
+                        buyPrice: parseFloat(cols[priceIdx]) || 0,
                         currentPrice: 0
                     });
+                    importedCount++;
                 }
             });
-            saveToLocal(); fetchPrices();
+
+            saveToLocal();
+            fetchPrices();
+            alert(`Import Successful! ${importedCount} trades processed.`);
+            e.target.value = ''; // Reset input
         };
-        reader.readAsText(e.target.files[0]);
+        reader.readAsText(file);
     }
 
     function exportCSV() {
