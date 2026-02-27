@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.5.2</title>
+    <title>Crypto Global Portfolio v1.6.3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -18,11 +18,9 @@
         
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); transition: 0.3s; }
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
         .nav-btns { display: flex; gap: 10px; align-items: center; }
         .theme-toggle { background: #555; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
-
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
 
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -31,8 +29,18 @@
         .card strong { font-size: 22px; display: block; }
         .card small { font-size: 12px; font-weight: bold; display: block; margin-top: 5px; }
 
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; }
-        input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; background: var(--card-bg); color: var(--text); }
+        /* FIXED FORM LAYOUT TO PREVENT OVERLAPPING */
+        .form-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 20px; 
+            background: rgba(0,100,230,0.05); 
+            padding: 25px; 
+            border-radius: 12px; 
+            align-items: end;
+        }
+        input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
         
         .btn { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; }
         .btn:hover { opacity: 0.9; }
@@ -44,49 +52,24 @@
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; cursor: pointer; text-align: left; color: #666; position: relative; }
-        th:hover { background: rgba(0,0,0,0.08); }
-        th.active-sort::after { content: ' ▾'; position: absolute; right: 5px; }
-        th.active-sort.asc::after { content: ' ▴'; }
-        
         td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
         
         .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
-
-        .chart-container { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); height: fit-content; }
-
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
 
-        .action-btns { display: flex; gap: 8px; }
-        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
-        .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
+        /* Drill-down styling */
+        .group-row { cursor: pointer; }
+        .group-row:hover { background: rgba(0,100,230,0.05); }
+        .drill-down-row { background: rgba(0,0,0,0.02); font-size: 13px; color: #666; }
+        .drill-down-row td { border-bottom: 1px dashed var(--border); }
+        .expand-icon { width: 12px; display: inline-block; font-size: 10px; color: var(--primary); }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--overlay);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(2px);
-        }
-        .modal-content {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 16px;
-            max-width: 450px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-        .modal-content h3 { margin-top: 0; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; text-align: center; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
-        .modal-btn { flex: 1; min-width: 100px; }
-
-        .footer { margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid var(--border); font-size: 13px; color: #777; }
-        .footer a { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .modal-btn { flex: 1; min-width: 120px; }
 
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
     </style>
@@ -97,8 +80,7 @@
     <div class="modal-content">
         <h3 id="modalTitle">Confirm Action</h3>
         <p id="modalMessage"></p>
-        <div id="modalBtnContainer" class="modal-buttons">
-            </div>
+        <div id="modalBtnContainer" class="modal-buttons"></div>
     </div>
 </div>
 
@@ -107,7 +89,7 @@
         <h1 style="margin:0">📊 Global Portfolio</h1>
         <div class="nav-btns">
             <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update (UTC Reset)</button>
-            <select id="currencySelector" onchange="handleCurrencyChange()">
+            <select id="currencySelector" onchange="render()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
                 <option value="eur">EUR (€)</option>
@@ -121,18 +103,16 @@
         <div class="card"><span>Total Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Market Value</span><strong id="totalValue">0</strong></div>
         <div class="card">
-            <span>Daily PnL (00:00 UTC)</span>
+            <span>Today's PnL (00:00 UTC)</span>
             <strong id="dailyPnL">0</strong>
             <small id="dailyPnLPercent">0%</small>
         </div>
         <div class="card"><span>Total Growth</span><strong id="totalGrowth">0%</strong></div>
     </div>
 
-    <input type="hidden" id="editIndex" value="-1">
-
     <div class="form-grid">
         <div>
-            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Symbol (e.g. BTC)</label>
+            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Asset Symbol</label>
             <input type="text" id="coinId" list="binanceSuggestions" placeholder="BTC">
             <datalist id="binanceSuggestions"></datalist>
         </div>
@@ -142,25 +122,24 @@
         </div>
         <div>
             <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Amount</label>
-            <input type="number" id="holdings" placeholder="0.00" step="any">
+            <input type="number" id="holdings" placeholder="0.00">
         </div>
         <div>
-            <label id="buyPriceLabel" style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Avg Buy Price (USD)</label>
-            <input type="number" id="buyPrice" placeholder="0.00" step="any">
+            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Avg Buy Price (USD)</label>
+            <input type="number" id="buyPrice" placeholder="0.00">
         </div>
-        <div style="display:flex; align-items:flex-end; gap:5px;">
-            <button class="btn btn-add" id="submitBtn" onclick="saveTrade()">Save Trade</button>
-            <button class="btn btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none">Cancel</button>
+        <div>
+            <button class="btn btn-add" onclick="saveTrade()">Save Trade</button>
         </div>
     </div>
 
-    <div class="controls" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+    <div class="controls" style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
         <input type="text" id="searchInput" placeholder="🔍 Filter by code..." onkeyup="render()" style="max-width:300px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export CSV</button>
             <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance</button>
             <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
-            <label style="font-size:13px; align-self:center; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
+            <label style="font-size:13px; align-self:center; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="expandedAssets.clear();render()" checked> Group Assets</label>
         </div>
     </div>
 
@@ -173,7 +152,7 @@
                         <th onclick="setSort('currentPrice')">Price</th>
                         <th onclick="setSort('date')">Date</th>
                         <th onclick="setSort('amount')">Holdings</th>
-                        <th onclick="setSort('buyPriceDisplay')">Avg Buy</th>
+                        <th>Avg Buy</th>
                         <th onclick="setSort('invested')">Invested</th>
                         <th onclick="setSort('pnl')">PnL</th>
                         <th onclick="setSort('pnlPercent')">%</th>
@@ -188,13 +167,6 @@
             <div style="height: 300px;"><canvas id="allocationChart"></canvas></div>
         </div>
     </div>
-
-    <div class="footer">
-        Stay updated with the latest news at 
-        <a href="https://www.youtube.com/@crypto_globalnews" target="_blank">Crypto Global News YouTube</a>
-        <br><br>
-        &copy; 2024 Crypto Global Portfolio Tracker
-    </div>
 </div>
 
 <script>
@@ -202,42 +174,32 @@
     let assetMetadata = {}; 
     let usdRates = { usd: 1, aed: 3.6725, eur: 0.92, inr: 83.3 };
     let sortKey = 'symbol', sortAsc = true, myChart = null;
+    let expandedAssets = new Set();
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    // Fully restored Modal System
     function showConfirm(title, message, actions) {
         const modal = document.getElementById('confirmModal');
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('modalMessage').innerText = message;
-        
         const container = document.getElementById('modalBtnContainer');
         container.innerHTML = '';
-
-        actions.forEach(action => {
-            const btn = document.createElement('button');
-            btn.innerText = action.label;
-            btn.className = `btn modal-btn ${action.className || 'btn-cancel'}`;
-            btn.onclick = () => {
-                if (action.callback) action.callback();
-                closeModal();
-            };
-            container.appendChild(btn);
+        actions.forEach(a => {
+            const b = document.createElement('button');
+            b.innerText = a.label;
+            b.className = `btn modal-btn ${a.className || 'btn-cancel'}`;
+            b.onclick = () => { if (a.callback) a.callback(); closeModal(); };
+            container.appendChild(b);
         });
-        
         modal.style.display = 'flex';
     }
 
     function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
+    function toggleTheme() { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); render(); }
+    function saveToLocal() { localStorage.setItem('crypto_binance_v11', JSON.stringify(trades)); }
 
-    function toggleTheme() {
-        const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', theme);
-        render();
-    }
-
-    function handleCurrencyChange() {
-        const cur = document.getElementById('currencySelector').value;
-        document.getElementById('buyPriceLabel').innerText = `Avg Buy Price (${cur.toUpperCase()})`;
+    function toggleDrillDown(symbol) {
+        if (expandedAssets.has(symbol)) expandedAssets.delete(symbol);
+        else expandedAssets.add(symbol);
         render();
     }
 
@@ -253,63 +215,6 @@
             }});
         } catch(e) {}
     }
-
-    function saveTrade() {
-        const id = document.getElementById('coinId').value.toUpperCase().trim();
-        const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
-        const amount = parseFloat(document.getElementById('holdings').value);
-        const inputPrice = parseFloat(document.getElementById('buyPrice').value);
-        const editIdx = parseInt(document.getElementById('editIndex').value);
-        if (!id || isNaN(amount) || isNaN(inputPrice)) return;
-        const cur = document.getElementById('currencySelector').value;
-        const buyPriceUSD = inputPrice / (usdRates[cur] || 1);
-        const tradeData = { id, date, amount, buyPrice: buyPriceUSD };
-        if (editIdx > -1) trades[editIdx] = tradeData;
-        else trades.push(tradeData);
-        saveToLocal(); resetForm(); fetchPrices();
-    }
-
-    function editTrade(index) {
-        showConfirm("Edit Trade", "Load this entry into the form?", [
-            { label: 'Cancel', className: 'btn-cancel' },
-            { label: 'Confirm', className: 'btn-add', callback: () => {
-                const t = trades[index];
-                const cur = document.getElementById('currencySelector').value;
-                const displayPrice = t.buyPrice * (usdRates[cur] || 1);
-                document.getElementById('coinId').value = t.id;
-                document.getElementById('tradeDate').value = t.date;
-                document.getElementById('holdings').value = t.amount;
-                document.getElementById('buyPrice').value = displayPrice.toFixed(4);
-                document.getElementById('editIndex').value = index;
-                document.getElementById('submitBtn').innerText = "Update Trade";
-                document.getElementById('cancelBtn').style.display = "block";
-                window.scrollTo({ top: 100, behavior: 'smooth' });
-            }}
-        ]);
-    }
-
-    function removeTrade(id, index) {
-        showConfirm("Delete Entry", `Are you sure you want to delete ${id}?`, [
-            { label: 'Cancel', className: 'btn-cancel' },
-            { label: 'Confirm', className: 'btn-add', callback: () => {
-                if (index === -1) trades = trades.filter(t => t.id !== id);
-                else trades.splice(index, 1);
-                saveToLocal(); render();
-            }}
-        ]);
-    }
-
-    function resetForm() {
-        document.getElementById('coinId').value = '';
-        document.getElementById('tradeDate').value = '';
-        document.getElementById('holdings').value = '';
-        document.getElementById('buyPrice').value = '';
-        document.getElementById('editIndex').value = "-1";
-        document.getElementById('submitBtn').innerText = "Save Trade";
-        document.getElementById('cancelBtn').style.display = "none";
-    }
-
-    function saveToLocal() { localStorage.setItem('crypto_binance_v11', JSON.stringify(trades)); }
 
     async function fetchPrices() {
         const btn = document.querySelector('.btn-refresh');
@@ -328,122 +233,115 @@
                 }
             });
             render();
-        } catch(e) { console.error("Sync Failed", e); }
+        } catch(e) { console.error(e); }
         if (btn) { btn.innerText = '🔄 Update Prices'; btn.disabled = false; }
     }
 
-    function setSort(key) { sortKey = key; sortAsc = !sortAsc; render(); }
-
     function render() {
-        const groupToggle = document.getElementById('groupToggle');
-        const curSelector = document.getElementById('currencySelector');
-        if (!groupToggle || !curSelector) return;
-        const isGrouped = groupToggle.checked;
+        const isGrouped = document.getElementById('groupToggle').checked;
         const search = document.getElementById('searchInput').value.toLowerCase();
-        const cur = curSelector.value;
+        const cur = document.getElementById('currencySelector').value;
         const sym = curMap[cur] || '$';
         const rate = usdRates[cur] || 1;
-        
-        let displayData = [];
-        let totalDailyPnL = 0;
+        const tbody = document.getElementById('portfolioBody');
+        tbody.innerHTML = '';
+
+        let tInv = 0, tVal = 0, totalDailyPnL = 0, chartData = {};
 
         const processed = trades.map((t, idx) => {
             const meta = assetMetadata[t.id] || { price: 0, openUTC: 0, logo: '' };
-            const currentPrice = meta.price * rate;
-            const invested = t.amount * (t.buyPrice * rate);
-            const currentVal = t.amount * currentPrice;
-            const dailyPnL = (meta.price - meta.openUTC) * t.amount * rate;
-            totalDailyPnL += dailyPnL;
-
-            return { 
-                ...t, 
-                symbol: t.id,
-                currentPrice,
-                buyPriceDisplay: t.buyPrice * rate,
-                invested, 
-                currentValue: currentVal, 
-                pnl: currentVal - invested, 
-                pnlPercent: invested > 0 ? ((currentVal - invested) / invested) * 100 : 0, 
-                originalIndex: idx,
-                logo: meta.logo
-            };
+            const cp = meta.price * rate;
+            const inv = t.amount * (t.buyPrice * rate);
+            const val = t.amount * cp;
+            return { ...t, currentPrice: cp, inv, val, dailyPnL: (meta.price - meta.openUTC) * t.amount * rate, logo: meta.logo, originalIndex: idx };
         });
 
-        if (isGrouped) {
-            const groups = {};
-            processed.forEach(t => {
-                if (!groups[t.id]) groups[t.id] = { ...t, amount: 0, invested: 0, currentValue: 0, date: '-' };
-                groups[t.id].amount += t.amount;
-                groups[t.id].invested += t.invested;
-                groups[t.id].currentValue += t.currentValue;
-            });
-            displayData = Object.values(groups).map(g => {
-                const pnl = g.currentValue - g.invested;
-                return { ...g, buyPriceDisplay: g.invested / g.amount, pnl, pnlPercent: g.invested > 0 ? (pnl / g.invested) * 100 : 0 };
-            });
-        } else {
-            displayData = processed;
-        }
+        const groups = {};
+        processed.forEach(t => {
+            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, dailyPnL: 0, logo: t.logo, trades: [] };
+            groups[t.id].amount += t.amount;
+            groups[t.id].inv += t.inv;
+            groups[t.id].val += t.val;
+            groups[t.id].dailyPnL += t.dailyPnL;
+            groups[t.id].trades.push(t);
+        });
 
-        displayData = displayData.filter(d => d.symbol.toLowerCase().includes(search))
-            .sort((a,b) => {
-                let valA = a[sortKey], valB = b[sortKey];
-                if (typeof valA === 'string') return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                return sortAsc ? valA - valB : valB - valA;
-            });
+        // Global portfolio totals
+        Object.values(groups).forEach(g => { tInv += g.inv; tVal += g.val; totalDailyPnL += g.dailyPnL; if(g.val > 0) chartData[g.id] = g.val; });
 
-        const tbody = document.getElementById('portfolioBody');
-        tbody.innerHTML = '';
-        let tInv = 0, tVal = 0;
-        let chartData = {};
+        const displayList = isGrouped ? Object.values(groups).map(g => ({ ...g, symbol: g.id, pnl: g.val - g.inv, pnlPct: g.inv > 0 ? (g.val - g.inv)/g.inv*100 : 0 })) : processed.map(p => ({ ...p, symbol: p.id, pnl: p.val - p.inv, pnlPct: p.inv > 0 ? (p.val - p.inv)/p.inv*100 : 0 }));
 
-        displayData.forEach((d) => {
-            tInv += d.invested; tVal += d.currentValue;
-            if(d.currentValue > 0) { 
-                chartData[d.symbol] = (chartData[d.symbol] || 0) + d.currentValue;
-            }
+        displayList.filter(d => d.symbol.toLowerCase().includes(search)).sort((a,b) => {
+            let valA = a[sortKey], valB = b[sortKey];
+            return sortAsc ? (valA < valB ? -1 : 1) : (valA > valB ? -1 : 1);
+        }).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
-            tbody.innerHTML += `<tr>
-                <td><div class="asset-cell"><img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
-                <td>${sym}${d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td>${d.date}</td>
+            const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
+
+            tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
+                <td><div class="asset-cell">
+                    ${isGrouped ? `<span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>` : ''}
+                    <img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'">
+                    <span>${d.symbol}</span>
+                </div></td>
+                <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString() : '0.00'}</td>
+                <td>${d.date || '-'}</td>
                 <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${d.buyPriceDisplay.toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
-                <td>${sym}${d.invested.toLocaleString()}</td>
+                <td>${sym}${(d.inv/d.amount).toFixed(2)}</td>
+                <td>${sym}${d.inv.toLocaleString()}</td>
                 <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
-                <td class="${pClass}">${d.pnlPercent.toFixed(2)}%</td>
-                <td class="action-btns">
-                    <button class="btn-edit" onclick="editTrade(${isGrouped ? -1 : d.originalIndex})" ${isGrouped ? 'style="display:none"' : ''}>Edit</button>
-                    <button class="btn-remove" onclick="removeTrade('${d.id}', ${isGrouped ? -1 : d.originalIndex})">×</button>
-                </td>
+                <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
+                <td><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button></td>
             </tr>`;
+
+            if (isExpanded) {
+                d.trades.forEach(t => {
+                    const rowPnl = t.val - t.inv;
+                    tbody.innerHTML += `<tr class="drill-down-row">
+                        <td style="padding-left:35px">↳ Entry</td>
+                        <td>${sym}${t.currentPrice.toLocaleString()}</td>
+                        <td>${t.date}</td>
+                        <td>${t.amount.toLocaleString()}</td>
+                        <td>${sym}${t.buyPrice.toFixed(2)}</td>
+                        <td>${sym}${t.inv.toLocaleString()}</td>
+                        <td class="${rowPnl >= 0 ? 'profit' : 'loss'}">${sym}${rowPnl.toLocaleString()}</td>
+                        <td class="${rowPnl >= 0 ? 'profit' : 'loss'}">${(t.inv > 0 ? (rowPnl/t.inv)*100 : 0).toFixed(2)}%</td>
+                        <td><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td>
+                    </tr>`;
+                });
+            }
         });
 
-        // Fixed Portfolio Allocation Labels
-        const chartLabels = Object.keys(chartData).map(key => {
-            const pct = tVal > 0 ? ((chartData[key] / tVal) * 100).toFixed(1) : 0;
-            return `${key} (${pct}%)`;
-        });
-        updateChart(chartLabels, Object.values(chartData));
-        
+        const labels = Object.keys(chartData).map(k => `${k} (${(chartData[k]/tVal*100).toFixed(1)}%)`);
+        updateChart(labels, Object.values(chartData));
         document.getElementById('totalInvested').innerText = sym + Math.round(tInv).toLocaleString();
         document.getElementById('totalValue').innerText = sym + Math.round(tVal).toLocaleString();
         document.getElementById('totalGrowth').innerText = (tInv > 0 ? ((tVal - tInv) / tInv * 100).toFixed(2) : 0) + '%';
-        
-        const dPnL = document.getElementById('dailyPnL');
-        const dPct = document.getElementById('dailyPnLPercent');
-        dPnL.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
-        dPnL.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
-        dPct.innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
+        const dpnl = document.getElementById('dailyPnL');
+        dpnl.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
+        dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
+        document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
     }
 
-    function updateChart(labels, values) {
-        if (myChart) myChart.destroy();
-        myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2'], borderWidth: 0 }] },
-            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
-        });
+    function removeTrade(id, index) {
+        showConfirm("Delete Entry", `Delete ${id}?`, [
+            { label: 'Cancel' },
+            { label: 'Confirm', className: 'btn-add', callback: () => {
+                if (index === -1) trades = trades.filter(t => t.id !== id);
+                else trades.splice(index, 1);
+                saveToLocal(); render();
+            }}
+        ]);
+    }
+
+    function saveTrade() {
+        const id = document.getElementById('coinId').value.toUpperCase().trim();
+        const amt = parseFloat(document.getElementById('holdings').value);
+        const prc = parseFloat(document.getElementById('buyPrice').value);
+        if (!id || isNaN(amt)) return;
+        const cur = document.getElementById('currencySelector').value;
+        trades.push({ id, amount: amt, buyPrice: prc / (usdRates[cur] || 1), date: document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0] });
+        saveToLocal(); fetchPrices();
     }
 
     function importCSV(e) {
@@ -453,10 +351,9 @@
         reader.onload = (f) => {
             const rows = f.target.result.split('\n');
             if (rows.length < 2) return;
-            
             showConfirm("Import CSV", "How would you like to handle this import?", [
-                { label: 'Cancel', className: 'btn-cancel' },
-                { label: 'Add to Existing', className: 'btn-refresh', callback: () => processCSV(rows, false) },
+                { label: 'Cancel' },
+                { label: 'Add to List', className: 'btn-refresh', callback: () => processCSV(rows, false) },
                 { label: 'Overwrite All', className: 'btn-add', callback: () => processCSV(rows, true) }
             ]);
         };
@@ -465,27 +362,27 @@
 
     function processCSV(rows, overwrite) {
         if (overwrite) trades = [];
-        const header = rows[0].split(',');
-        const dIdx = header.findIndex(h => h.includes('Date'));
-        const sIdx = header.findIndex(h => h.includes('Base Asset'));
-        const aIdx = header.findIndex(h => h.includes('Filled'));
-        const pIdx = header.findIndex(h => h.includes('AvgTrading Price'));
-        const tIdx = header.findIndex(h => h.includes('Type'));
-        
-        rows.slice(1).forEach(row => {
-            const cols = row.split(',');
-            if(cols.length > 5 && cols[tIdx]?.includes('BUY')) {
-                trades.push({
-                    id: cols[sIdx].trim().toUpperCase(),
-                    date: cols[dIdx]?.split(' ')[0] || '',
-                    amount: parseFloat(cols[aIdx]) || 0,
-                    buyPrice: parseFloat(cols[pIdx]) || 0
-                });
+        const h = rows[0].split(',');
+        const dIdx = h.findIndex(x => x.includes('Date')), sIdx = h.findIndex(x => x.includes('Base Asset')), aIdx = h.findIndex(x => x.includes('Filled')), pIdx = h.findIndex(x => x.includes('AvgTrading Price')), tIdx = h.findIndex(x => x.includes('Type'));
+        rows.slice(1).forEach(r => {
+            const c = r.split(',');
+            if(c.length > 5 && c[tIdx]?.includes('BUY')) {
+                trades.push({ id: c[sIdx].trim().toUpperCase(), date: c[dIdx]?.split(' ')[0] || '', amount: parseFloat(c[aIdx]) || 0, buyPrice: parseFloat(c[pIdx]) || 0 });
             }
         });
         saveToLocal(); fetchPrices();
     }
 
+    function updateChart(l, v) {
+        if (myChart) myChart.destroy();
+        myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+        });
+    }
+
+    function setSort(k) { sortKey = k; sortAsc = !sortAsc; render(); }
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
