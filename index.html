@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.4.2</title>
+    <title>Crypto Global Portfolio v1.3.4</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { 
@@ -25,10 +25,10 @@
 
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
 
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .card { padding: 15px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
-        .card span { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; }
-        .card strong { font-size: 18px; display: block; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { padding: 20px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
+        .card span { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+        .card strong { font-size: 22px; display: block; }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; }
         input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; box-sizing: border-box; background: var(--card-bg); color: var(--text); }
@@ -39,24 +39,20 @@
         .btn-refresh { background: var(--success); }
         .btn-cancel { background: #6c757d; }
 
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 380px; gap: 25px; margin-bottom: 20px; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: rgba(0,0,0,0.04); padding: 12px; font-size: 11px; text-transform: uppercase; cursor: pointer; text-align: left; color: #666; position: relative; }
+        th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; cursor: pointer; text-align: left; color: #666; position: relative; }
         th:hover { background: rgba(0,0,0,0.08); }
         th.active-sort::after { content: ' ▾'; position: absolute; right: 5px; }
         th.active-sort.asc::after { content: ' ▴'; }
         
-        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
         
         .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
 
-        .chart-section { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
-        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .time-tabs { display: flex; gap: 5px; }
-        .tab-btn { background: var(--border); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--text); }
-        .tab-btn.active { background: var(--primary); color: white; }
+        .chart-container { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border); height: fit-content; }
 
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
@@ -65,20 +61,29 @@
         .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
 
+        /* Custom Modal Styles */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: var(--overlay);
             display: none;
-            justify-content: center; align-items: center;
-            z-index: 1000; backdrop-filter: blur(2px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
         }
         .modal-content {
-            background: var(--card-bg); padding: 25px; border-radius: 16px;
-            max-width: 400px; width: 90%; text-align: center;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
+        .modal-content h3 { margin-top: 0; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+        .modal-btn { flex: 1; }
 
         .footer { margin-top: 40px; text-align: center; padding: 20px; border-top: 1px solid var(--border); font-size: 13px; color: #777; }
         .footer a { color: var(--primary); text-decoration: none; font-weight: bold; }
@@ -88,62 +93,48 @@
 </head>
 <body>
 
+<!-- Custom Confirmation/Message Modal -->
 <div id="confirmModal" class="modal-overlay">
     <div class="modal-content">
         <h3 id="modalTitle">Confirm Action</h3>
-        <p id="modalMessage">Are you sure?</p>
+        <p id="modalMessage">Are you sure you want to proceed?</p>
         <div class="modal-buttons">
-            <button id="modalCancelBtn" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-            <button id="modalConfirmBtn" class="btn btn-add">Confirm</button>
+            <button id="modalCancelBtn" class="btn btn-cancel modal-btn" onclick="closeModal()">Cancel</button>
+            <button id="modalConfirmBtn" class="btn btn-add modal-btn">Confirm</button>
         </div>
     </div>
 </div>
 
 <div class="container">
     <div class="header-flex">
-        <h1 style="margin:0">📊 Global Portfolio v1.4.2</h1>
+        <h1 style="margin:0">📊 Global Portfolio</h1>
         <div class="nav-btns">
-            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Refresh</button>
+            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update Prices</button>
             <select id="currencySelector" onchange="handleCurrencyChange()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
                 <option value="eur">EUR (€)</option>
                 <option value="inr">INR (₹)</option>
             </select>
-            <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Mode</button>
         </div>
     </div>
 
     <div class="summary-grid">
-        <div class="card"><span>Invested</span><strong id="totalInvested">0</strong></div>
+        <div class="card"><span>Total Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Market Value</span><strong id="totalValue">0</strong></div>
-        <div class="card"><span>Total PnL</span><strong id="totalPnL">0</strong></div>
-        <div class="card"><span>Today's PnL</span><strong id="totalPnLToday">0</strong></div>
-        <div class="card"><span>Daily %</span><strong id="dailyPercent">0%</strong></div>
-        <div class="card"><span>All-Time Growth</span><strong id="totalGrowth">0%</strong></div>
-    </div>
-
-    <!-- History Chart Section -->
-    <div class="chart-section">
-        <div class="chart-header">
-            <h3 style="margin:0; font-size:16px;">Portfolio Performance</h3>
-            <div class="time-tabs">
-                <button id="btn-1d" class="tab-btn" onclick="updateHistoryChart(1, this)">1D</button>
-                <button id="btn-7d" class="tab-btn active" onclick="updateHistoryChart(7, this)">1W</button>
-                <button id="btn-30d" class="tab-btn" onclick="updateHistoryChart(30, this)">1M</button>
-            </div>
-        </div>
-        <div style="height: 250px;"><canvas id="historyChart"></canvas></div>
+        <div class="card"><span>Total Profit/Loss</span><strong id="totalPnL">0</strong></div>
+        <div class="card"><span>Portfolio Growth</span><strong id="totalGrowth">0%</strong></div>
     </div>
 
     <input type="hidden" id="editIndex" value="-1">
 
     <div class="form-grid">
         <div>
-            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Asset (e.g. BTC or bitcoin)</label>
+            <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Asset ID (Coingecko ID)</label>
             <input type="text" id="coinId" list="coinList" placeholder="bitcoin">
-            <datalist id="coinList"></datalist>
         </div>
+        <datalist id="coinList"></datalist>
         <div>
             <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Date</label>
             <input type="date" id="tradeDate">
@@ -157,18 +148,18 @@
             <input type="number" id="buyPrice" placeholder="0.00" step="any">
         </div>
         <div style="display:flex; align-items:flex-end; gap:5px;">
-            <button class="btn btn-add" id="submitBtn" onclick="saveTrade()">Save</button>
-            <button class="btn btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none">✕</button>
+            <button class="btn btn-add" id="submitBtn" onclick="saveTrade()">Save Trade</button>
+            <button class="btn btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none">Cancel</button>
         </div>
     </div>
 
     <div class="controls" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-        <input type="text" id="searchInput" placeholder="🔍 Search holdings..." onkeyup="render()" style="max-width:300px;">
-        <div style="display:flex; gap:10px;">
-            <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export</button>
-            <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import</button>
+        <input type="text" id="searchInput" placeholder="🔍 Filter by code..." onkeyup="render()" style="max-width:300px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export CSV</button>
+            <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance</button>
             <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
-            <label style="font-size:13px; align-self:center;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
+            <label style="font-size:13px; align-self:center; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
         </div>
     </div>
 
@@ -177,60 +168,98 @@
             <table>
                 <thead>
                     <tr>
-                        <th onclick="setSort('symbol')">Asset</th>
-                        <th onclick="setSort('currentPrice')">Price</th>
-                        <th onclick="setSort('dailyPercent')">Daily %</th>
-                        <th onclick="setSort('amount')">Holdings</th>
-                        <th onclick="setSort('buyPriceDisplay')">Avg Buy</th>
-                        <th onclick="setSort('invested')">Invested</th>
-                        <th onclick="setSort('pnl')">Total PnL</th>
-                        <th onclick="setSort('pnlPercent')">Total %</th>
+                        <th id="th-id" onclick="setSort('symbol')">Asset</th>
+                        <th id="th-price" onclick="setSort('currentPrice')">Price</th>
+                        <th id="th-date" onclick="setSort('date')">Date</th>
+                        <th id="th-amount" onclick="setSort('amount')">Holdings</th>
+                        <th id="th-buy" onclick="setSort('buyPriceDisplay')">Avg Buy</th>
+                        <th id="th-invested" onclick="setSort('invested')">Invested</th>
+                        <th id="th-pnl" onclick="setSort('pnl')">PnL</th>
+                        <th id="th-percent" onclick="setSort('pnlPercent')">%</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="portfolioBody"></tbody>
             </table>
         </div>
-        <div class="card" style="padding:10px; height: fit-content;">
-            <h4 style="margin:5px 0 15px 0; font-size:13px;">Allocation</h4>
-            <div style="height: 250px;"><canvas id="allocationChart"></canvas></div>
+        <div class="chart-container">
+            <h4 style="margin-top:0; font-size:14px; text-align:center;">Portfolio Allocation</h4>
+            <div style="height: 300px;"><canvas id="allocationChart"></canvas></div>
         </div>
     </div>
 
     <div class="footer">
-        Join us for daily insights at 
+        Stay updated with the latest news at 
         <a href="https://www.youtube.com/@crypto_globalnews" target="_blank">Crypto Global News YouTube</a>
         <br><br>
-        #Crypto #PortfolioTracker #Binance #Blockchain
+        &copy; 2024 Crypto Global Portfolio Tracker
     </div>
 </div>
 
 <script>
+    // trades: BuyPrice is ALWAYS stored in USD internally
     let trades = JSON.parse(localStorage.getItem('crypto_binance_v11')) || [];
     let assetMetadata = {}; 
-    let usdRates = { usd: 1, aed: 3.6725, eur: 0.92, inr: 83.3 };
-    let sortKey = 'symbol', sortAsc = true;
-    let myChart = null, myHistoryChart = null;
+    let usdRates = { usd: 1, aed: 3.6725, eur: 0.92, inr: 83.3 }; // Default fallbacks
+    let sortKey = 'symbol', sortAsc = true, myChart = null;
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    const idToBinance = {
-        'bitcoin': 'BTCUSDT', 'ethereum': 'ETHUSDT', 'solana': 'SOLUSDT', 'ripple': 'XRPUSDT',
-        'binancecoin': 'BNBUSDT', 'cardano': 'ADAUSDT', 'polkadot': 'DOTUSDT', 'quant': 'QNTUSDT',
-        'chainlink': 'LINKUSDT', 'avalanche-2': 'AVAXUSDT', 'stellar': 'XLMUSDT', 'dogecoin': 'DOGEUSDT'
+    const symbolToId = {
+        'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple', 
+        'BNB': 'binancecoin', 'ADA': 'cardano', 'DOT': 'polkadot', 
+        'AVAX': 'avalanche-2', 'LINK': 'chainlink', 'ARB': 'arbitrum', 
+        'POL': 'polygon-ecosystem-token', 'QNT': 'quant', 
+        'HBAR': 'hedera-hashgraph', 'XLM': 'stellar'
     };
 
-    function showConfirm(title, message, onConfirm) {
+    /**
+     * Utility for fetching with retries and exponential backoff.
+     */
+    async function fetchWithRetry(url, options = {}, retries = 5, delay = 1000) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                // Handle rate limiting (429) specially or any other non-2xx
+                if (response.status === 429 && retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithRetry(url, options, retries - 1, delay * 2);
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return fetchWithRetry(url, options, retries - 1, delay * 2);
+            }
+            throw error;
+        }
+    }
+
+    // Modal Confirmation/Message Helper
+    function showConfirm(title, message, onConfirm, showCancel = true) {
         const modal = document.getElementById('confirmModal');
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('modalMessage').innerText = message;
+        
+        const cancelBtn = document.getElementById('modalCancelBtn');
+        cancelBtn.style.display = showCancel ? 'block' : 'none';
+
         const confirmBtn = document.getElementById('modalConfirmBtn');
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        newConfirmBtn.onclick = () => { onConfirm(); closeModal(); };
+        
+        newConfirmBtn.onclick = () => {
+            if (onConfirm) onConfirm();
+            closeModal();
+        };
+        
         modal.style.display = 'flex';
     }
 
-    function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
+    function closeModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+    }
 
     function toggleTheme() {
         const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -241,57 +270,77 @@
     function handleCurrencyChange() {
         const cur = document.getElementById('currencySelector').value;
         document.getElementById('buyPriceLabel').innerText = `Avg Buy Price (${cur.toUpperCase()})`;
+        assetMetadata = {};
         fetchPrices();
     }
 
     async function loadCoinList() {
         try {
-            const res = await fetch('https://api.coingecko.com/api/v3/coins/list');
-            const coins = await res.json();
+            const coins = await fetchWithRetry('https://api.coingecko.com/api/v3/coins/list');
             const dl = document.getElementById('coinList');
             if (dl) {
-                dl.innerHTML = '';
-                coins.slice(0, 2000).forEach(c => {
-                    let o = document.createElement('option');
-                    o.value = c.id;
-                    o.innerText = c.symbol.toUpperCase();
+                coins.slice(0, 4000).forEach(c => {
+                    let o = document.createElement('option'); o.value = c.id; o.textContent = c.symbol.toUpperCase();
                     dl.appendChild(o);
                 });
             }
-        } catch(e) { console.error("Dropdown load failed"); }
+        } catch(e) {
+            console.error("Failed to load coin list", e);
+        }
     }
 
     function saveTrade() {
-        const id = document.getElementById('coinId').value.toLowerCase().trim();
+        const idInput = document.getElementById('coinId');
+        const id = idInput.value.toLowerCase().trim();
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
         const amount = parseFloat(document.getElementById('holdings').value);
         const inputPrice = parseFloat(document.getElementById('buyPrice').value);
         const editIdx = parseInt(document.getElementById('editIndex').value);
+
         if (!id || isNaN(amount) || isNaN(inputPrice)) return;
 
         const cur = document.getElementById('currencySelector').value;
         const buyPriceUSD = inputPrice / (usdRates[cur] || 1);
+
         const tradeData = { id, date, amount, buyPrice: buyPriceUSD };
 
         if (editIdx > -1) trades[editIdx] = tradeData;
         else trades.push(tradeData);
 
-        localStorage.setItem('crypto_binance_v11', JSON.stringify(trades));
-        resetForm();
-        fetchPrices();
+        saveToLocal(); resetForm(); fetchPrices();
     }
 
     function editTrade(index) {
-        const t = trades[index];
-        const cur = document.getElementById('currencySelector').value;
-        const displayPrice = t.buyPrice * (usdRates[cur] || 1);
-        document.getElementById('coinId').value = t.id;
-        document.getElementById('tradeDate').value = t.date;
-        document.getElementById('holdings').value = t.amount;
-        document.getElementById('buyPrice').value = displayPrice.toFixed(4);
-        document.getElementById('editIndex').value = index;
-        document.getElementById('submitBtn').innerText = "Update";
-        document.getElementById('cancelBtn').style.display = "block";
+        showConfirm(
+            "Edit Trade", 
+            "Are you sure you want to edit this entry? The data will be loaded into the form above.", 
+            () => {
+                const t = trades[index];
+                const cur = document.getElementById('currencySelector').value;
+                const displayPrice = t.buyPrice * (usdRates[cur] || 1);
+
+                document.getElementById('coinId').value = t.id;
+                document.getElementById('tradeDate').value = t.date;
+                document.getElementById('holdings').value = t.amount;
+                document.getElementById('buyPrice').value = displayPrice.toFixed(4);
+                document.getElementById('editIndex').value = index;
+                document.getElementById('submitBtn').innerText = "Update Trade";
+                document.getElementById('cancelBtn').style.display = "block";
+                window.scrollTo({ top: 100, behavior: 'smooth' });
+            }
+        );
+    }
+
+    function removeTrade(id, index) {
+        showConfirm(
+            "Delete Entry", 
+            `Are you sure you want to delete this entry for ${id}? This action cannot be undone.`, 
+            () => {
+                if (index === -1) trades = trades.filter(t => t.id !== id);
+                else trades.splice(index, 1);
+                saveToLocal(); render();
+            }
+        );
     }
 
     function resetForm() {
@@ -300,53 +349,58 @@
         document.getElementById('holdings').value = '';
         document.getElementById('buyPrice').value = '';
         document.getElementById('editIndex').value = "-1";
-        document.getElementById('submitBtn').innerText = "Save";
+        document.getElementById('submitBtn').innerText = "Save Trade";
         document.getElementById('cancelBtn').style.display = "none";
     }
 
+    function saveToLocal() { localStorage.setItem('crypto_binance_v11', JSON.stringify(trades)); }
+
     async function fetchPrices() {
-        const cur = document.getElementById('currencySelector').value;
+        const curSelector = document.getElementById('currencySelector');
+        if (!curSelector) return;
+        const cur = curSelector.value;
+        
         const btn = document.querySelector('.btn-refresh');
-        if (btn) btn.disabled = true;
+        if (btn) {
+            btn.innerText = '⌛ Updating...';
+            btn.disabled = true;
+        }
 
         try {
-            const rateRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=usd,aed,eur,inr`);
-            const rateData = await rateRes.json();
-            if (rateData['usd-coin']) usdRates = rateData['usd-coin'];
+            // 1. Fetch current exchange rates vs USD
+            const rateData = await fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=usd,aed,eur,inr`);
+            if (rateData['usd-coin']) {
+                const rawRates = rateData['usd-coin'];
+                const usdc_in_usd = rawRates['usd'];
+                for (let key in rawRates) {
+                    usdRates[key] = rawRates[key] / usdc_in_usd;
+                }
+            }
 
-            const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-            const binanceData = await binanceRes.json();
-            const binanceMap = {};
-            binanceData.forEach(t => binanceMap[t.symbol] = t);
-
+            // 2. Fetch market data for assets
             const ids = [...new Set(trades.map(t => t.id))].join(',');
             if (ids) {
-                const cgRes = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}`);
-                const cgData = await cgRes.json();
-                
-                cgData.forEach(coin => {
-                    const bSymbol = idToBinance[coin.id] || (coin.symbol.toUpperCase() + 'USDT');
-                    const bTicker = binanceMap[bSymbol];
-                    
-                    const priceInUSD = bTicker ? parseFloat(bTicker.lastPrice) : coin.current_price;
-                    // Daily change percentage from Binance (since UTC midnight usually for their ticker if calibrated, otherwise 24h rolling)
-                    // Binance ticker/24hr returns statistics for the last 24 hours.
-                    const changePercent = bTicker ? parseFloat(bTicker.priceChangePercent) : coin.price_change_percentage_24h;
-                    const changeVal = bTicker ? parseFloat(bTicker.priceChange) : coin.price_change_24h;
-
+                const data = await fetchWithRetry(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=${cur}&ids=${ids}`);
+                data.forEach(coin => {
                     assetMetadata[coin.id] = {
-                        price: priceInUSD * (usdRates[cur] || 1),
+                        price: coin.current_price,
                         logo: coin.image,
-                        symbol: coin.symbol.toUpperCase(),
-                        dailyPercent: changePercent || 0,
-                        dailyPnLUnit: (changeVal || 0) * (usdRates[cur] || 1)
+                        symbol: coin.symbol.toUpperCase()
                     };
                 });
             }
+            
             render();
-            updateHistoryChart(7);
-        } catch(e) { console.error("Refresh failed", e); }
-        finally { if (btn) btn.disabled = false; }
+        } catch(e) {
+            console.error("Price fetch failed", e);
+            showConfirm("Network Error", "Failed to retrieve the latest prices after several attempts. Please check your internet connection or try again later.", null, false);
+            render(); 
+        } finally {
+            if (btn) {
+                btn.innerText = '🔄 Update Prices';
+                btn.disabled = false;
+            }
+        }
     }
 
     function setSort(key) {
@@ -356,181 +410,147 @@
     }
 
     function render() {
-        const isGrouped = document.getElementById('groupToggle').checked;
+        const groupToggle = document.getElementById('groupToggle');
+        const curSelector = document.getElementById('currencySelector');
+        if (!groupToggle || !curSelector) return;
+        
+        const isGrouped = groupToggle.checked;
         const searchInput = document.getElementById('searchInput');
         const search = searchInput ? searchInput.value.toLowerCase() : '';
-        const cur = document.getElementById('currencySelector').value;
+        const cur = curSelector.value;
         const sym = curMap[cur] || '$';
-        const rate = usdRates[cur] || 1;
+        const activeRate = usdRates[cur] || 1;
         
-        let tInv = 0, tVal = 0, tPnLToday = 0;
-        let processed = trades.map((t, idx) => {
-            const meta = assetMetadata[t.id] || { price: 0, logo: '', symbol: t.id.substring(0,4).toUpperCase(), dailyPercent: 0, dailyPnLUnit: 0 };
-            const inv = t.amount * (t.buyPrice * rate);
-            const val = t.amount * meta.price;
-            const pnl = val - inv;
-            const pnlToday = t.amount * meta.dailyPnLUnit;
+        let displayData = [];
 
-            return { ...t, ...meta, invested: inv, currentValue: val, pnl, pnlToday, originalIndex: idx, pnlPercent: inv > 0 ? (pnl/inv)*100 : 0 };
+        const processedTrades = trades.map((t, idx) => {
+            const meta = assetMetadata[t.id] || { price: 0, logo: '', symbol: t.id.substring(0,4).toUpperCase() };
+            const buyPriceConverted = t.buyPrice * activeRate;
+            const inv = t.amount * buyPriceConverted;
+            const cp = meta.price; 
+            const pnl = (t.amount * cp) - inv;
+            
+            return { 
+                ...t, 
+                symbol: meta.symbol,
+                logo: meta.logo,
+                currentPrice: cp,
+                buyPriceDisplay: buyPriceConverted,
+                invested: inv, 
+                currentValue: t.amount * cp, 
+                pnl, 
+                pnlPercent: inv > 0 ? (pnl / inv) * 100 : 0, 
+                originalIndex: idx 
+            };
         });
 
         if (isGrouped) {
             const groups = {};
-            processed.forEach(t => {
-                if (!groups[t.id]) groups[t.id] = { ...t, amount: 0, invested: 0, currentValue: 0, pnlToday: 0, date: '-' };
+            processedTrades.forEach(t => {
+                if (!groups[t.id]) {
+                    groups[t.id] = { ...t, amount: 0, invested: 0, currentValue: 0, date: '-' };
+                }
                 groups[t.id].amount += t.amount;
                 groups[t.id].invested += t.invested;
                 groups[t.id].currentValue += t.currentValue;
-                groups[t.id].pnlToday += t.pnlToday;
             });
-            processed = Object.values(groups).map(g => {
+            displayData = Object.values(groups).map(g => {
                 const pnl = g.currentValue - g.invested;
-                return { ...g, buyPriceDisplay: g.invested/g.amount, pnl, pnlPercent: (pnl/g.invested)*100 };
+                return { ...g, buyPriceDisplay: g.invested / g.amount, pnl, pnlPercent: g.invested > 0 ? (pnl / g.invested) * 100 : 0 };
             });
         } else {
-            processed = processed.map(p => ({ ...p, buyPriceDisplay: p.buyPrice * rate }));
+            displayData = processedTrades;
         }
 
-        processed = processed.filter(d => d.symbol.toLowerCase().includes(search)).sort((a,b) => (sortAsc ? (a[sortKey]>b[sortKey]?1:-1) : (a[sortKey]<b[sortKey]?1:-1)));
-
-        const tbody = document.getElementById('portfolioBody');
-        if (tbody) {
-            tbody.innerHTML = '';
-            let cLabels = [], cValues = [];
-
-            processed.forEach(d => {
-                tInv += d.invested; tVal += d.currentValue; tPnLToday += d.pnlToday;
-                if(d.currentValue > 0) { cLabels.push(d.symbol); cValues.push(d.currentValue); }
-                const pClass = d.pnl >= 0 ? 'profit' : 'loss';
-                const dClass = d.dailyPercent >= 0 ? 'profit' : 'loss';
-                
-                tbody.innerHTML += `<tr>
-                    <td><div class="asset-cell"><img class="asset-logo" src="${d.logo}"><span>${d.symbol}</span></div></td>
-                    <td>${sym}${d.price.toLocaleString()}</td>
-                    <td class="${dClass}">${d.dailyPercent > 0 ? '+' : ''}${d.dailyPercent.toFixed(2)}%</td>
-                    <td>${d.amount.toLocaleString()}</td>
-                    <td>${sym}${d.buyPriceDisplay.toLocaleString()}</td>
-                    <td>${sym}${d.invested.toLocaleString()}</td>
-                    <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
-                    <td class="${pClass}">${d.pnlPercent.toFixed(2)}%</td>
-                    <td class="action-btns">
-                        <button class="btn-edit" onclick="editTrade(${isGrouped ? -1 : d.originalIndex})" ${isGrouped?'hidden':''}>Edit</button>
-                        <button class="btn-remove" onclick="removeTrade('${d.id}', ${isGrouped ? -1 : d.originalIndex})">×</button>
-                    </td>
-                </tr>`;
+        displayData = displayData.filter(d => d.symbol.toLowerCase().includes(search) || d.id.includes(search))
+            .sort((a,b) => {
+                let valA = a[sortKey];
+                let valB = b[sortKey];
+                if (typeof valA === 'string') {
+                    return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return sortAsc ? valA - valB : valB - valA;
             });
 
-            updateAllocChart(cLabels, cValues);
+        document.querySelectorAll('th').forEach(th => th.classList.remove('active-sort', 'asc'));
+        const activeTh = document.querySelector(`[onclick^="setSort('${sortKey}')"]`);
+        if (activeTh) {
+            activeTh.classList.add('active-sort');
+            if (sortAsc) activeTh.classList.add('asc');
         }
 
+        const tbody = document.getElementById('portfolioBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        let tInv = 0, tVal = 0, cLabels = [], cValues = [];
+
+        displayData.forEach((d) => {
+            tInv += d.invested; tVal += d.currentValue;
+            if(d.currentValue > 0) { cLabels.push(d.symbol); cValues.push(d.currentValue); }
+            
+            const pClass = d.pnl >= 0 ? 'profit' : 'loss';
+            tbody.innerHTML += `<tr>
+                <td>
+                    <div class="asset-cell">
+                        <img class="asset-logo" src="${d.logo || 'https://static.coingecko.com/s/missing_thumb.png'}" onerror="this.src='https://static.coingecko.com/s/missing_thumb.png'">
+                        <span>${d.symbol}</span>
+                    </div>
+                </td>
+                <td>${sym}${(d.currentPrice||0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td>${d.date}</td>
+                <td>${d.amount.toLocaleString(undefined, {maximumFractionDigits: 8})}</td>
+                <td>${sym}${d.buyPriceDisplay.toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
+                <td>${sym}${d.invested.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
+                <td class="${pClass}">${sym}${d.pnl.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                <td class="${pClass}">${d.pnlPercent.toFixed(2)}%</td>
+                <td class="action-btns">
+                    <button class="btn-edit" onclick="editTrade(${isGrouped ? -1 : d.originalIndex})" ${isGrouped ? 'style="display:none"' : ''}>Edit</button>
+                    <button class="btn-remove" onclick="removeTrade('${d.id}', ${isGrouped ? -1 : d.originalIndex})">×</button>
+                </td>
+            </tr>`;
+        });
+
+        updateChart(cLabels, cValues);
+        
         const elInv = document.getElementById('totalInvested');
         const elVal = document.getElementById('totalValue');
         const elPnL = document.getElementById('totalPnL');
-        const elPnLToday = document.getElementById('totalPnLToday');
-        const elDailyPercent = document.getElementById('dailyPercent');
-        const elGrowth = document.getElementById('totalGrowth');
+        const elGro = document.getElementById('totalGrowth');
 
         if (elInv) elInv.innerText = sym + Math.round(tInv).toLocaleString();
         if (elVal) elVal.innerText = sym + Math.round(tVal).toLocaleString();
         
-        const net = tVal - tInv;
+        const pnlTotal = tVal - tInv;
         if (elPnL) {
-            elPnL.innerText = (net >= 0 ? '+' : '') + sym + Math.round(net).toLocaleString();
-            elPnL.className = net >= 0 ? 'profit' : 'loss';
+            elPnL.innerText = (pnlTotal >= 0 ? '+' : '') + sym + Math.round(pnlTotal).toLocaleString();
+            elPnL.className = pnlTotal >= 0 ? 'profit' : 'loss';
         }
         
-        if (elPnLToday) {
-            elPnLToday.innerText = (tPnLToday >= 0 ? '+' : '') + sym + Math.round(tPnLToday).toLocaleString();
-            elPnLToday.className = tPnLToday >= 0 ? 'profit' : 'loss';
-        }
-
-        // Calculate aggregate daily percentage: (Total Value Change Today / Value at Start of Day)
-        const valAtStartOfDay = tVal - tPnLToday;
-        const aggregateDailyPercent = valAtStartOfDay > 0 ? (tPnLToday / valAtStartOfDay) * 100 : 0;
-        if (elDailyPercent) {
-            elDailyPercent.innerText = (aggregateDailyPercent >= 0 ? '+' : '') + aggregateDailyPercent.toFixed(2) + '%';
-            elDailyPercent.className = aggregateDailyPercent >= 0 ? 'profit' : 'loss';
-        }
-
-        const growth = tInv > 0 ? (net/tInv)*100 : 0;
-        if (elGrowth) {
-            elGrowth.innerText = (growth >= 0 ? '+' : '') + growth.toFixed(2) + '%';
-            elGrowth.className = growth >= 0 ? 'profit' : 'loss';
+        const growth = tInv > 0 ? (pnlTotal / tInv) * 100 : 0;
+        if (elGro) {
+            elGro.innerText = growth.toFixed(2) + '%';
+            elGro.className = growth >= 0 ? 'profit' : 'loss';
         }
     }
 
-    async function updateHistoryChart(days, btn) {
-        if (typeof Chart === 'undefined') return;
-        if (btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-        const canvas = document.getElementById('historyChart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const ids = [...new Set(trades.map(t => t.id))];
-        if (!ids.length) return;
-
-        const cur = document.getElementById('currencySelector').value;
-        const sym = curMap[cur] || '$';
-        const rate = usdRates[cur] || 1;
-
-        try {
-            let masterHistory = {}; 
-            for (let id of ids) {
-                const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`);
-                const data = await res.json();
-                const holdingsOfId = trades.filter(t => t.id === id).reduce((acc, curr) => acc + curr.amount, 0);
-                
-                if (data.prices) {
-                    data.prices.forEach(([ts, price]) => {
-                        masterHistory[ts] = (masterHistory[ts] || 0) + (price * holdingsOfId * rate);
-                    });
-                }
-            }
-
-            const sortedTs = Object.keys(masterHistory).sort((a,b) => a - b);
-            const labels = sortedTs.map(ts => new Date(parseInt(ts)).toLocaleDateString([], { month: 'short', day: 'numeric', hour: days === 1 ? 'numeric' : undefined }));
-            const values = sortedTs.map(ts => masterHistory[ts]);
-
-            if (myHistoryChart) myHistoryChart.destroy();
-            myHistoryChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets: [{ label: 'Value', data: values, borderColor: '#0064e6', tension: 0.3, fill: true, backgroundColor: 'rgba(0,100,230,0.1)' }] },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { ticks: { callback: v => sym + v.toLocaleString() } } }
-                }
-            });
-        } catch(e) { console.error("History chart failed", e); }
-    }
-
-    function updateAllocChart(labels, values) {
+    function updateChart(labels, values) {
         if (typeof Chart === 'undefined') return;
         const canvas = document.getElementById('allocationChart');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (myChart) myChart.destroy();
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         myChart = new Chart(ctx, {
             type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c','#fd7e14'], borderWidth: 0 }] },
-            options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            data: { labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c','#fd7e14','#20c997'], borderWidth: 0, hoverOffset: 10 }] },
+            options: { 
+                plugins: { 
+                    legend: { position: 'bottom', labels: { color: isDark ? '#e0e0e0' : '#333', font: { size: 10 }, usePointStyle: true, padding: 15 } } 
+                },
+                cutout: '65%',
+                maintainAspectRatio: false
+            }
         });
-    }
-
-    function removeTrade(id, index) {
-        showConfirm("Delete Entry", `Delete ${id}?`, () => {
-            if (index === -1) trades = trades.filter(t => t.id !== id);
-            else trades.splice(index, 1);
-            localStorage.setItem('crypto_binance_v11', JSON.stringify(trades));
-            render();
-        });
-    }
-
-    function exportCSV() {
-        let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
     }
 
     function importCSV(e) {
@@ -539,24 +559,52 @@
         const reader = new FileReader();
         reader.onload = (f) => {
             const rows = f.target.result.split('\n');
-            trades = [];
-            rows.slice(1).forEach(row => {
-                const cols = row.split(',');
-                if (cols.length > 3) {
-                    trades.push({ id: cols[1].trim(), date: cols[0].trim(), amount: parseFloat(cols[2]), buyPrice: parseFloat(cols[3]) });
+            if (rows.length < 2) return;
+            
+            showConfirm(
+                "Import CSV", 
+                "Do you want to overwrite your existing portfolio? Select 'Confirm' to clear and start fresh, or 'Cancel' to exit import.", 
+                () => {
+                    trades = [];
+                    const header = rows[0].split(',');
+                    const dateIdx = header.findIndex(h => h.includes('Date'));
+                    const baseAssetIdx = header.findIndex(h => h.includes('Base Asset'));
+                    const amountIdx = header.findIndex(h => h.includes('Filled'));
+                    const priceIdx = header.findIndex(h => h.includes('AvgTrading Price'));
+                    const typeIdx = header.findIndex(h => h.includes('Type'));
+                    let importedCount = 0;
+                    rows.slice(1).forEach(row => {
+                        const cols = row.split(',');
+                        if(cols.length > 5 && cols[typeIdx] && cols[typeIdx].includes('BUY')) {
+                            const symbol = cols[baseAssetIdx].trim().toUpperCase();
+                            trades.push({
+                                id: symbolToId[symbol] || symbol.toLowerCase(),
+                                date: cols[dateIdx] ? cols[dateIdx].split(' ')[0] : new Date().toISOString().split('T')[0],
+                                amount: parseFloat(cols[amountIdx]) || 0,
+                                buyPrice: parseFloat(cols[priceIdx]) || 0
+                            });
+                            importedCount++;
+                        }
+                    });
+                    saveToLocal(); fetchPrices();
+                    e.target.value = '';
                 }
-            });
-            localStorage.setItem('crypto_binance_v11', JSON.stringify(trades));
-            fetchPrices();
+            );
         };
         reader.readAsText(file);
     }
 
-    window.onload = () => { 
-        loadCoinList(); 
-        fetchPrices(); 
+    function exportCSV() {
+        let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
+        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
+    }
+
+    window.onload = function () {
+        loadCoinList();
+        fetchPrices();
         setInterval(fetchPrices, 180000); 
     };
 </script>
 </body>
 </html>
+
