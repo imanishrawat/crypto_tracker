@@ -3,80 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.7.1</title>
+    <title>Crypto Global Portfolio v1.9.0</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { 
-            --primary: #0064e6; --success: #28a745; --danger: #dc3545; 
-            --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee;
-            --overlay: rgba(0, 0, 0, 0.5);
-        }
-        [data-theme="dark"] {
-            --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333;
-            --overlay: rgba(0, 0, 0, 0.7);
-        }
-        
+        :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.5); }
+        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.7); }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); transition: 0.3s; }
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
         .nav-btns { display: flex; gap: 10px; align-items: center; }
         .theme-toggle { background: #555; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
-
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card { padding: 20px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .card span { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
         .card strong { font-size: 22px; display: block; }
-        .card small { font-size: 12px; font-weight: bold; display: block; margin-top: 5px; }
-
-        .form-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
-            gap: 20px; 
-            margin-bottom: 20px; 
-            background: rgba(0,100,230,0.05); 
-            padding: 20px; 
-            border-radius: 12px; 
-            align-items: end;
-        }
+        .form-grid { display: grid; grid-template-columns: 1fr auto; gap: 20px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; align-items: end; }
         input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
-        
         .btn { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; }
-        .btn:hover { opacity: 0.9; }
         .btn-add { background: var(--primary); }
         .btn-refresh { background: var(--success); }
         .btn-cancel { background: var(--danger) !important; color: white; }
-
         .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; cursor: pointer; text-align: left; color: #666; }
+        th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; text-align: left; color: #666; }
         td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        
         .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
-
-        .action-btns { display: flex; gap: 8px; align-items: center; }
-        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .action-btns { display: flex; gap: 8px; }
+        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
-
-        .group-row { cursor: pointer; }
-        .group-row:hover { background: rgba(0,100,230,0.05); }
-        .drill-down-row { background: rgba(0,0,0,0.02); font-size: 13px; color: #666; }
-        .drill-down-row td { border-bottom: 1px dashed var(--border); }
         .expand-icon { width: 12px; display: inline-block; font-size: 10px; color: var(--primary); }
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
-        .modal-btn { flex: 1; min-width: 120px; }
-
+        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 16px; max-width: 450px; width: 90%; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
+        
+        /* Auth Screen Styling */
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
+
+<div id="auth-screen">
+    <h1>📊 Portfolio Tracker</h1>
+    <p>Please log in to access your cloud portfolio.</p>
+    <button class="google-btn" onclick="login()">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Logo.svg" width="18" height="18"> Sign in with Google
+    </button>
+</div>
 
 <div id="confirmModal" class="modal-overlay">
     <div class="modal-content">
@@ -86,51 +69,35 @@
     </div>
 </div>
 
-<div class="container">
+<div id="main-app" class="container" style="display:none;">
     <div class="header-flex">
-        <h1 style="margin:0">📊 Global Portfolio</h1>
+        <h1 style="margin:0">📊 Portfolio <span id="sync-status">● Offline</span></h1>
         <div class="nav-btns">
-            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update (UTC Reset)</button>
+            <button class="btn" style="background:#555; font-size:11px;" onclick="logout()">🚪 Logout</button>
+            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Refresh Price</button>
             <select id="currencySelector" onchange="render()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
                 <option value="eur">EUR (€)</option>
                 <option value="inr">INR (₹)</option>
             </select>
-            <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Mode</button>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
         </div>
     </div>
 
     <div class="summary-grid">
         <div class="card"><span>Total Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Market Value</span><strong id="totalValue">0</strong></div>
-        <div class="card">
-            <span>Daily PnL (UTC)</span>
-            <strong id="dailyPnL">0</strong>
-            <small id="dailyPnLPercent">0%</small>
-        </div>
-        <div class="card">
-            <span>Total Growth</span>
-            <strong id="totalGrowth">0%</strong>
-            <small id="totalGrowthAmount">0</small>
-        </div>
+        <div class="card"><span>Daily PnL (UTC)</span><strong id="dailyPnL">0</strong><small id="dailyPnLPercent">0%</small></div>
+        <div class="card"><span>Total Growth</span><strong id="totalGrowth">0%</strong><small id="totalGrowthAmount">0</small></div>
     </div>
 
     <input type="hidden" id="editIndex" value="-1">
 
     <div class="form-grid">
-        <div style="flex: 2;">
-            <h3 style="margin: 0 0 10px 0; font-size: 14px;">Add USDT (P2P Entry)</h3>
-            <div style="display: flex; gap: 10px;">
-                <div style="flex: 1;">
-                    <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">Date</label>
-                    <input type="date" id="tradeDate">
-                </div>
-                <div style="flex: 1;">
-                    <label style="font-size:11px; font-weight:bold; display:block; margin-bottom:5px;">USDT Amount</label>
-                    <input type="number" id="holdings" placeholder="0.00">
-                </div>
-            </div>
+        <div style="display: flex; gap: 15px; flex-grow: 1;">
+            <div style="flex: 1;"><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:5px;">Date</label><input type="date" id="tradeDate"></div>
+            <div style="flex: 1;"><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:5px;">Add USDT (P2P)</label><input type="number" id="holdings" placeholder="0.00"></div>
         </div>
         <div style="display:flex; gap:10px;">
             <button class="btn btn-add" id="submitBtn" onclick="saveUsdtP2P()">Save USDT</button>
@@ -175,47 +142,69 @@
 </div>
 
 <script>
-    let trades = JSON.parse(localStorage.getItem('crypto_binance_v11')) || [];
+    // --- YOUR FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyDq8E_O1Ie5D6T47O1eDA0kcDKZc9IOU6E",
+        authDomain: "my-crypto-portfolio-98e37.firebaseapp.com",
+        projectId: "my-crypto-portfolio-98e37",
+        storageBucket: "my-crypto-portfolio-98e37.firebasestorage.app",
+        databaseURL: "https://my-crypto-portfolio-98e37-default-rtdb.firebaseio.com/",
+        messagingSenderId: "186953471395",
+        appId: "1:186953471395:web:f1135450c5a7ffbdcd7616",
+        measurementId: "G-C56LZE9K04"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    let trades = []; 
     let assetMetadata = {}; 
     let usdRates = { usd: 1, aed: 3.67, eur: 0.92, inr: 83.0 };
     let sortKey = 'symbol', sortAsc = true, myChart = null;
     let expandedAssets = new Set();
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    // Persistent Theme
+    // Update 3: Theme Persistence
     const savedTheme = localStorage.getItem('theme-preference') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
 
+    // AUTH LOGIC
+    function login() { auth.signInWithPopup(provider); }
+    function logout() { auth.signOut().then(() => location.reload()); }
+
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            startSync(user.uid);
+        } else {
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('main-app').style.display = 'none';
+        }
+    });
+
+    function startSync(uid) {
+        db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
+            trades = snapshot.val() || [];
+            document.getElementById('sync-status').innerText = "● Cloud Synced";
+            document.getElementById('sync-status').style.color = "var(--success)";
+            fetchPrices(); 
+        });
+    }
+
+    function saveToCloud() {
+        const user = auth.currentUser;
+        if (!user) return;
+        document.getElementById('sync-status').innerText = "● Saving...";
+        db.ref('users/' + user.uid + '/trades').set(trades);
+    }
+
     function toggleTheme() {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme-preference', next);
-        render();
-    }
-
-    function showConfirm(title, message, actions) {
-        const modal = document.getElementById('confirmModal');
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('modalMessage').innerText = message;
-        const container = document.getElementById('modalBtnContainer');
-        container.innerHTML = '';
-        actions.forEach(a => {
-            const b = document.createElement('button');
-            b.innerText = a.label;
-            b.className = `btn ${a.className || 'btn-cancel'}`;
-            b.onclick = () => { if (a.callback) a.callback(); closeModal(); };
-            container.appendChild(b);
-        });
-        modal.style.display = 'flex';
-    }
-
-    function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-    function saveToLocal() { localStorage.setItem('crypto_binance_v11', JSON.stringify(trades)); }
-
-    function toggleDrillDown(symbol) {
-        if (expandedAssets.has(symbol)) expandedAssets.delete(symbol);
-        else expandedAssets.add(symbol);
         render();
     }
 
@@ -228,16 +217,12 @@
             data.forEach(t => {
                 if (t.symbol.endsWith('USDT')) {
                     const base = t.symbol.replace('USDT', '');
-                    assetMetadata[base] = {
-                        price: parseFloat(t.lastPrice),
-                        openUTC: parseFloat(t.openPrice),
-                        logo: `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${base.toLowerCase()}.png`
-                    };
+                    assetMetadata[base] = { price: parseFloat(t.lastPrice), openUTC: parseFloat(t.openPrice), logo: `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${base.toLowerCase()}.png` };
                 }
             });
             render();
-        } catch(e) { console.error("Sync Failed", e); }
-        if (btn) btn.innerText = '🔄 Update (UTC Reset)';
+        } catch(e) { console.error(e); }
+        if (btn) btn.innerText = '🔄 Update Prices';
     }
 
     function render() {
@@ -248,33 +233,24 @@
         const rate = usdRates[cur] || 1;
         const tbody = document.getElementById('portfolioBody');
         tbody.innerHTML = '';
-
         let tInv = 0, tVal = 0, totalDailyPnL = 0, chartData = {};
 
         const processed = trades.map((t, idx) => {
             const symbolKey = t.id.toUpperCase();
-            let meta;
-            // Stable Logic for USDT
-            if (symbolKey === 'USDT') {
-                meta = { price: 1.0, openUTC: 1.0, logo: 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png' };
-            } else {
-                meta = assetMetadata[symbolKey] || { price: 0, openUTC: 0, logo: '' };
-            }
-            
+            // Price Fix Mapping
+            let meta = symbolKey === 'USDT' ? { price: 1.0, openUTC: 1.0, logo: 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png' } : (assetMetadata[symbolKey] || { price: 0, openUTC: 0, logo: '' });
             const inv = t.amount * (t.buyPrice * rate);
             const val = t.amount * (meta.price * rate);
-            const dailyPnL = (meta.price - meta.openUTC) * t.amount * rate;
-            totalDailyPnL += dailyPnL;
-            return { ...t, id: symbolKey, currentPrice: meta.price * rate, inv, val, dailyPnL, logo: meta.logo, originalIndex: idx };
+            totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
+            return { ...t, id: symbolKey, currentPrice: meta.price * rate, inv, val, logo: meta.logo, originalIndex: idx };
         });
 
         const groups = {};
         processed.forEach(t => {
-            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, dailyPnL: 0, logo: t.logo, date: '-', trades: [] };
+            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, trades: [] };
             groups[t.id].amount += t.amount;
             groups[t.id].inv += t.inv;
             groups[t.id].val += t.val;
-            groups[t.id].dailyPnL += t.dailyPnL;
             groups[t.id].trades.push(t);
         });
 
@@ -284,20 +260,14 @@
 
         displayData.filter(d => d.symbol.toLowerCase().includes(search)).sort((a,b) => {
             let valA = a[sortKey], valB = b[sortKey];
-            if (typeof valA === 'string') return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            return sortAsc ? valA - valB : valB - valA;
+            return sortAsc ? (valA < valB ? -1 : 1) : (valA > valB ? -1 : 1);
         }).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
             const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
-
             tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
-                <td><div class="asset-cell">
-                    ${isGrouped ? `<span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>` : ''}
-                    <img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'">
-                    <span>${d.symbol}</span>
-                </div></td>
+                <td><div class="asset-cell">${isGrouped ? `<span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>` : ''}<img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
                 <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
-                <td>${d.date}</td>
+                <td>${d.date || '-'}</td>
                 <td>${d.amount.toLocaleString()}</td>
                 <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
                 <td>${sym}${d.inv.toLocaleString()}</td>
@@ -308,61 +278,37 @@
                     <button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button>
                 </td>
             </tr>`;
-
             if (isExpanded) {
                 d.trades.forEach(t => {
-                    const tpPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row">
-                        <td style="padding-left: 35px;">↳ Entry</td>
-                        <td>${sym}${t.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                        <td>${t.date}</td>
-                        <td>${t.amount.toLocaleString()}</td>
-                        <td>${sym}${(t.inv/t.amount).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
-                        <td>${sym}${t.inv.toLocaleString()}</td>
-                        <td class="${tpPnl >= 0 ? 'profit' : 'loss'}">${sym}${tpPnl.toLocaleString()}</td>
-                        <td class="${tpPnl >= 0 ? 'profit' : 'loss'}">${(t.inv > 0 ? tpPnl/t.inv*100 : 0).toFixed(2)}%</td>
-                        <td class="action-btns">
-                            <button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button>
-                            <button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button>
-                        </td>
-                    </tr>`;
+                    const rowPnl = t.val - t.inv;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
                 });
             }
         });
 
-        const labels = Object.keys(chartData).map(k => `${k} (${(chartData[k]/tVal*100).toFixed(1)}%)`);
-        updateChart(labels, Object.values(chartData));
-
         document.getElementById('totalInvested').innerText = sym + Math.round(tInv).toLocaleString();
         document.getElementById('totalValue').innerText = sym + Math.round(tVal).toLocaleString();
-        
-        const totalPnL = tVal - tInv;
-        const totalGrowthPct = tInv > 0 ? (totalPnL / tInv * 100).toFixed(2) : 0;
-        document.getElementById('totalGrowth').innerText = totalGrowthPct + '%';
-        document.getElementById('totalGrowthAmount').innerText = (totalPnL >= 0 ? '+' : '') + sym + Math.round(totalPnL).toLocaleString();
-        document.getElementById('totalGrowthAmount').className = totalPnL >= 0 ? 'profit' : 'loss';
-
-        const dPnL = document.getElementById('dailyPnL');
-        dPnL.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
-        dPnL.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
+        const growthTotal = tVal - tInv;
+        document.getElementById('totalGrowth').innerText = (tInv > 0 ? (growthTotal / tInv * 100).toFixed(2) : 0) + '%';
+        document.getElementById('totalGrowthAmount').innerText = (growthTotal >= 0 ? '+' : '') + sym + Math.round(growthTotal).toLocaleString();
+        document.getElementById('totalGrowthAmount').className = growthTotal >= 0 ? 'profit' : 'loss';
+        const dpnl = document.getElementById('dailyPnL');
+        dpnl.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
+        dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
         document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
+        updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/tVal*100).toFixed(1)}%)`), Object.values(chartData));
     }
 
     function removeTrade(id, index) {
-        showConfirm("Delete Entry", `Delete ${id}?`, [
-            { label: 'Cancel' },
-            { label: 'Confirm', className: 'btn-add', callback: () => {
-                if (index === -1) trades = trades.filter(t => t.id !== id);
-                else trades.splice(index, 1);
-                saveToLocal(); render();
-            }}
-        ]);
+        showConfirm("Delete Entry", `Delete ${id}?`, [{ label: 'Cancel' }, { label: 'Confirm', className: 'btn-add', callback: () => {
+            if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
+            saveToCloud();
+        }}]);
     }
 
     function editTrade(index) {
         if (index === -1) return;
         const t = trades[index];
-        const cur = document.getElementById('currencySelector').value;
         document.getElementById('tradeDate').value = t.date;
         document.getElementById('holdings').value = t.amount;
         document.getElementById('editIndex').value = index;
@@ -375,36 +321,22 @@
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
         const editIdx = parseInt(document.getElementById('editIndex').value);
         if (isNaN(amt)) return;
-        
-        // USDT P2P is always 1:1 ratio
         const tradeData = { id: 'USDT', amount: amt, buyPrice: 1.0, date: date };
-        
-        if (editIdx > -1) trades[editIdx] = tradeData;
-        else trades.push(tradeData);
-        
-        saveToLocal(); resetForm(); render();
+        if (editIdx > -1) trades[editIdx] = tradeData; else trades.push(tradeData);
+        saveToCloud(); resetForm();
     }
 
     function resetForm() {
-        document.getElementById('holdings').value = '';
-        document.getElementById('tradeDate').value = '';
-        document.getElementById('editIndex').value = "-1";
-        document.getElementById('submitBtn').innerText = "Save USDT";
-        document.getElementById('cancelBtn').style.display = "none";
+        document.getElementById('holdings').value = ''; document.getElementById('tradeDate').value = '';
+        document.getElementById('editIndex').value = "-1"; document.getElementById('submitBtn').innerText = "Save USDT"; document.getElementById('cancelBtn').style.display = "none";
     }
 
     function importCSV(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = (f) => {
             const rows = f.target.result.split('\n');
-            if (rows.length < 2) return;
-            showConfirm("Import CSV", "How to handle import?", [
-                { label: 'Cancel' },
-                { label: 'Add', className: 'btn-refresh', callback: () => processCSV(rows, false) },
-                { label: 'Overwrite', className: 'btn-add', callback: () => processCSV(rows, true) }
-            ]);
+            showConfirm("Import CSV", "Handle import?", [{ label: 'Cancel' }, { label: 'Add', className: 'btn-refresh', callback: () => processCSV(rows, false) }, { label: 'Overwrite All', className: 'btn-add', callback: () => processCSV(rows, true) }]);
             e.target.value = ''; 
         };
         reader.readAsText(file);
@@ -415,21 +347,33 @@
         const h = rows[0].split(',');
         const dIdx = h.findIndex(x => x.includes('Date')), sIdx = h.findIndex(x => x.includes('Base Asset')), aIdx = h.findIndex(x => x.includes('Filled')), pIdx = h.findIndex(x => x.includes('AvgTrading Price')), tIdx = h.findIndex(x => x.includes('Type'));
         rows.slice(1).forEach(row => {
-            const cols = row.split(',');
-            if(cols.length > 5 && cols[tIdx]?.includes('BUY')) {
-                trades.push({ id: cols[sIdx].trim().toUpperCase(), date: cols[dIdx]?.split(' ')[0] || '', amount: parseFloat(cols[aIdx]) || 0, buyPrice: parseFloat(cols[pIdx]) || 0 });
-            }
+            const c = row.split(',');
+            if(c.length > 5 && c[tIdx]?.includes('BUY')) trades.push({ id: c[sIdx].trim().toUpperCase(), date: c[dIdx]?.split(' ')[0] || '', amount: parseFloat(c[aIdx]) || 0, buyPrice: parseFloat(c[pIdx]) || 0 });
         });
-        saveToLocal(); fetchPrices();
+        saveToCloud();
     }
 
-    function updateChart(labels, values) {
+    function updateChart(l, v) {
         if (myChart) myChart.destroy();
         myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
-            type: 'doughnut',
-            data: { labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            type: 'doughnut', data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
             options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
         });
+    }
+
+    function showConfirm(title, message, actions) {
+        const modal = document.getElementById('confirmModal');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalMessage').innerText = message;
+        const container = document.getElementById('modalBtnContainer');
+        container.innerHTML = '';
+        actions.forEach(a => {
+            const b = document.createElement('button');
+            b.innerText = a.label; b.className = `btn modal-btn ${a.className || 'btn-cancel'}`;
+            b.onclick = () => { if (a.callback) a.callback(); closeModal(); };
+            container.appendChild(b);
+        });
+        modal.style.display = 'flex';
     }
 
     function setSort(key) { sortKey = key; sortAsc = !sortAsc; render(); }
@@ -438,7 +382,7 @@
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
     }
 
-    window.onload = () => { fetchPrices(); setInterval(fetchPrices, 180000); };
+    setInterval(fetchPrices, 180000); 
 </script>
 </body>
 </html>
