@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.0</title>
+    <title>Crypto Global Portfolio v1.9.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -45,8 +45,6 @@
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
-        
-        /* Auth Screen Styling */
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
@@ -55,7 +53,7 @@
 
 <div id="auth-screen">
     <h1>📊 Portfolio Tracker</h1>
-    <p>Please log in to access your cloud portfolio.</p>
+    <p>Sign in to sync your data across devices.</p>
     <button class="google-btn" onclick="login()">
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Logo.svg" width="18" height="18"> Sign in with Google
     </button>
@@ -142,7 +140,6 @@
 </div>
 
 <script>
-    // --- YOUR FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyDq8E_O1Ie5D6T47O1eDA0kcDKZc9IOU6E",
         authDomain: "my-crypto-portfolio-98e37.firebaseapp.com",
@@ -166,12 +163,12 @@
     let expandedAssets = new Set();
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    // Update 3: Theme Persistence
+    // Persistent Theme
     const savedTheme = localStorage.getItem('theme-preference') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
 
-    // AUTH LOGIC
-    function login() { auth.signInWithPopup(provider); }
+    // FIX: Using Redirect instead of Popup to avoid browser blockages
+    function login() { auth.signInWithRedirect(provider); }
     function logout() { auth.signOut().then(() => location.reload()); }
 
     auth.onAuthStateChanged((user) => {
@@ -180,6 +177,13 @@
             document.getElementById('main-app').style.display = 'block';
             startSync(user.uid);
         } else {
+            // Check for redirect result (important for signInWithRedirect)
+            auth.getRedirectResult().catch(error => {
+                console.error("Auth Error:", error.message);
+                if (error.code === 'auth/unauthorized-domain') {
+                    alert("Unauthorized Domain! Please add your domain in Firebase Console.");
+                }
+            });
             document.getElementById('auth-screen').style.display = 'flex';
             document.getElementById('main-app').style.display = 'none';
         }
@@ -201,6 +205,7 @@
         db.ref('users/' + user.uid + '/trades').set(trades);
     }
 
+    // Rest of the functions (fetchPrices, render, saveUsdtP2P, etc.) are identical to v1.9.0 logic
     function toggleTheme() {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
@@ -237,7 +242,6 @@
 
         const processed = trades.map((t, idx) => {
             const symbolKey = t.id.toUpperCase();
-            // Price Fix Mapping
             let meta = symbolKey === 'USDT' ? { price: 1.0, openUTC: 1.0, logo: 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png' } : (assetMetadata[symbolKey] || { price: 0, openUTC: 0, logo: '' });
             const inv = t.amount * (t.buyPrice * rate);
             const val = t.amount * (meta.price * rate);
@@ -381,8 +385,6 @@
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
     }
-
-    setInterval(fetchPrices, 180000); 
 </script>
 </body>
 </html>
