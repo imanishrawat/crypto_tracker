@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.8</title>
+    <title>Crypto Global Portfolio v1.9.9</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -43,6 +43,10 @@
         .action-btns { display: flex; gap: 8px; }
         .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
+        
+        /* FIXED CHART CONTAINER HEIGHT */
+        .chart-wrapper { position: relative; height: 350px; width: 100%; }
+
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s; }
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
@@ -124,7 +128,9 @@
         </div>
         <div class="chart-container" style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border);">
             <h4 style="margin:0; font-size:14px; text-align:center; padding-bottom:15px;">Allocation (Crypto Only)</h4>
-            <div style="height: 300px;"><canvas id="allocationChart"></canvas></div>
+            <div class="chart-wrapper">
+                <canvas id="allocationChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -221,8 +227,7 @@
         });
 
         Object.values(groups).forEach(g => { 
-            tInv += g.inv; 
-            tVal += g.val; 
+            tInv += g.inv; tVal += g.val; 
             if(g.val > 0 && g.id !== 'USDT') chartData[g.id] = g.val; 
         });
 
@@ -234,22 +239,12 @@
         }).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
             const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
-            
             tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
                 <td><div class="asset-cell">${isGrouped ? `<span class="expand-icon">${isExpanded?'▼':'▶'}</span>` : ''}<img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
                 <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
-                <td>${d.date || '-'}</td>
-                <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
-                <td>${sym}${d.inv.toLocaleString()}</td>
-                <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
-                <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
-                <td class="action-btns">
-                    <button class="btn-edit" onclick="event.stopPropagation(); editTrade(${isGrouped ? -1 : d.originalIndex})">✎</button>
-                    <button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button>
-                </td>
+                <td>${d.date || '-'}</td><td>${d.amount.toLocaleString()}</td><td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td><td>${sym}${d.inv.toLocaleString()}</td><td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td><td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
+                <td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${isGrouped ? -1 : d.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button></td>
             </tr>`;
-            
             if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
@@ -317,10 +312,16 @@
     }
 
     function updateChart(l, v) {
+        const canvas = document.getElementById('allocationChart');
+        if (!canvas) return;
         if (myChart) myChart.destroy();
-        myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
+        myChart = new Chart(canvas.getContext('2d'), {
             type: 'doughnut', data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c','#fd7e14','#20c997'], borderWidth: 0 }] },
-            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true, padding: 15 } } } }
+            options: { 
+                cutout: '65%', 
+                maintainAspectRatio: false, // ALLOW CHART TO FILL WRAPPER
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true, padding: 15 } } } 
+            }
         });
     }
 
@@ -349,25 +350,11 @@
     }
 
     function removeTrade(id, index) {
-        showConfirm("Delete Entry", `Delete ${id}?`, [
-            { label: 'Cancel', callback: closeModal },
-            { label: 'Confirm', className: 'btn-add', callback: () => {
-                if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
-                saveToCloud(); closeModal();
-            }}
-        ]);
+        showConfirm("Delete Entry", `Delete ${id}?`, [{ label: 'Cancel', callback: closeModal }, { label: 'Confirm', className: 'btn-add', callback: () => {
+            if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
+            saveToCloud(); closeModal();
+        }}]);
     }
-    
-    function editTrade(index) {
-        if (index === -1) return;
-        const t = trades[index];
-        document.getElementById('tradeDate').value = t.date;
-        document.getElementById('holdings').value = t.amount;
-        document.getElementById('editIndex').value = index;
-        document.getElementById('submitBtn').innerText = "Update USDT";
-        document.getElementById('cancelBtn').style.display = "block";
-    }
-
     function setSort(key) { if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; } render(); }
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
