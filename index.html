@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.8</title>
+    <title>Crypto Global Portfolio v1.9.9</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -52,8 +52,8 @@
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
 
-        /* FIXED: Allocation Chart Wrapper for Desktop Visibility */
-        .chart-wrapper { position: relative; height: 350px; width: 100%; }
+        /* Restored v1.7.1 Chart Container Styling */
+        .chart-container { background: var(--card-bg); }
     </style>
 </head>
 <body>
@@ -138,9 +138,7 @@
         </div>
         <div class="chart-container">
             <h4 style="margin:0; font-size:14px; text-align:center; padding-bottom:10px;">Allocation</h4>
-            <div class="chart-wrapper">
-                <canvas id="allocationChart"></canvas>
-            </div>
+            <div style="height: 300px;"><canvas id="allocationChart"></canvas></div>
         </div>
     </div>
 </div>
@@ -265,7 +263,7 @@
             if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(t.originalIndex)">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', t.originalIndex)">×</button></td></tr>`;
                 });
             }
         });
@@ -284,6 +282,17 @@
     }
 
     function toggleDrillDown(symbol) { if (expandedAssets.has(symbol)) expandedAssets.delete(symbol); else expandedAssets.add(symbol); render(); }
+    
+    // RESTORED v1.7.1 CHART UPDATE LOGIC
+    function updateChart(labels, values) {
+        if (myChart) myChart.destroy();
+        myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: values, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+        });
+    }
+
     function saveUsdtP2P() {
         const amt = parseFloat(document.getElementById('holdings').value);
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
@@ -325,25 +334,6 @@
         saveToCloud();
     }
 
-    // FIXED CHART SETTINGS FOR LAPTOP VISIBILITY
-    function updateChart(l, v) {
-        if (myChart) myChart.destroy();
-        const ctx = document.getElementById('allocationChart').getContext('2d');
-        myChart = new Chart(ctx, {
-            type: 'doughnut', 
-            data: { 
-                labels: l, 
-                datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] 
-            },
-            options: { 
-                responsive: true,
-                maintainAspectRatio: false, // Forces chart to respect .chart-wrapper height
-                cutout: '65%', 
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
-            }
-        });
-    }
-
     function showConfirm(title, message, actions) {
         const modal = document.getElementById('confirmModal');
         document.getElementById('modalTitle').innerText = title;
@@ -379,14 +369,12 @@
     function editTrade(idx) {
         if (idx === -1) return;
         const t = trades[idx];
-        if (t.id === 'USDT') {
-            document.getElementById('holdings').value = t.amount;
-            document.getElementById('tradeDate').value = t.date;
-            document.getElementById('editIndex').value = idx;
-            document.getElementById('submitBtn').innerText = "Update USDT";
-            document.getElementById('cancelBtn').style.display = "block";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        document.getElementById('holdings').value = t.amount;
+        document.getElementById('tradeDate').value = t.date;
+        document.getElementById('editIndex').value = idx;
+        document.getElementById('submitBtn').innerText = "Update USDT";
+        document.getElementById('cancelBtn').style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 </script>
 </body>
