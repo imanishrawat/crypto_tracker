@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.2</title>
+    <title>Crypto Global Portfolio v1.9.3</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -25,7 +25,7 @@
         .btn { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; }
         .btn-add { background: var(--primary); }
         .btn-refresh { background: var(--success); }
-        .btn-cancel { background: var(--danger) !important; color: white; }
+        .btn-cancel { background: var(--danger) !important; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
@@ -40,18 +40,16 @@
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
         
-        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
 <div id="auth-screen">
-    <div id="loader-icon" class="loader" style="display:none;"></div>
     <h1>📊 Portfolio Tracker</h1>
-    <p id="auth-msg">Sign in to sync your data across devices.</p>
+    <p>Loading your cloud session...</p>
     <button id="login-btn" class="google-btn" onclick="login()">
         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Logo.svg" width="18" height="18"> Sign in with Google
     </button>
@@ -67,10 +65,10 @@
 
 <div id="main-app" class="container" style="display:none;">
     <div class="header-flex">
-        <h1 style="margin:0">📊 Portfolio <span id="sync-status">● Offline</span></h1>
+        <h1 style="margin:0">📊 Portfolio <span id="sync-status">● Syncing...</span></h1>
         <div class="nav-btns">
             <button class="btn" style="background:#555; font-size:11px;" onclick="logout()">🚪 Logout</button>
-            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Refresh Price</button>
+            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update Prices</button>
             <select id="currencySelector" onchange="render()">
                 <option value="usd">USD ($)</option>
                 <option value="aed">AED (د.إ)</option>
@@ -84,7 +82,7 @@
     <div class="summary-grid">
         <div class="card"><span>Total Invested</span><strong id="totalInvested">0</strong></div>
         <div class="card"><span>Market Value</span><strong id="totalValue">0</strong></div>
-        <div class="card"><span>Daily PnL (UTC)</span><strong id="dailyPnL">0</strong><small id="dailyPnLPercent" style="display:block">0%</small></div>
+        <div class="card"><span>Daily PnL</span><strong id="dailyPnL">0</strong><small id="dailyPnLPercent" style="display:block">0%</small></div>
         <div class="card"><span>Total Growth</span><strong id="totalGrowth">0%</strong><small id="totalGrowthAmount" style="display:block">0</small></div>
     </div>
 
@@ -107,7 +105,7 @@
             <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export</button>
             <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance</button>
             <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
-            <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
+            <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="expandedAssets.clear();render()" checked> Group Assets</label>
         </div>
     </div>
 
@@ -115,17 +113,7 @@
         <div class="table-wrapper">
             <table>
                 <thead>
-                    <tr>
-                        <th onclick="setSort('symbol')">Asset</th>
-                        <th onclick="setSort('currentPrice')">Price</th>
-                        <th onclick="setSort('date')">Date</th>
-                        <th onclick="setSort('amount')">Holdings</th>
-                        <th>Avg Buy</th>
-                        <th onclick="setSort('invested')">Invested</th>
-                        <th onclick="setSort('pnl')">PnL</th>
-                        <th>%</th>
-                        <th>Actions</th>
-                    </tr>
+                    <tr><th onclick="setSort('symbol')">Asset</th><th onclick="setSort('currentPrice')">Price</th><th>Date</th><th>Holdings</th><th>Avg Buy</th><th>Invested</th><th>PnL</th><th>%</th><th>Actions</th></tr>
                 </thead>
                 <tbody id="portfolioBody"></tbody>
             </table>
@@ -161,49 +149,30 @@
     let expandedAssets = new Set();
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
+    // Set persistence to LOCAL (remembers login across browser closes)
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    function login() { auth.signInWithRedirect(provider); }
+    function logout() { auth.signOut().then(() => { trades=[]; location.reload(); }); }
+
+    // THEME MEMORY
     const savedTheme = localStorage.getItem('theme-preference') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
-
-    function login() { 
-        document.getElementById('loader-icon').style.display = 'block';
-        document.getElementById('login-btn').style.opacity = '0.5';
-        auth.signInWithRedirect(provider); 
-    }
-    function logout() { auth.signOut().then(() => { localStorage.clear(); location.reload(); }); }
 
     auth.onAuthStateChanged((user) => {
         if (user) {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
-            startSync(user.uid);
+            db.ref('users/' + user.uid + '/trades').on('value', (s) => {
+                trades = s.val() || [];
+                document.getElementById('sync-status').innerText = "● Cloud Synced";
+                document.getElementById('sync-status').style.color = "var(--success)";
+                fetchPrices();
+            });
         } else {
             document.getElementById('auth-screen').style.display = 'flex';
-            document.getElementById('main-app').style.display = 'none';
         }
     });
-
-    function startSync(uid) {
-        db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
-            trades = snapshot.val() || [];
-            document.getElementById('sync-status').innerText = "● Cloud Synced";
-            document.getElementById('sync-status').style.color = "var(--success)";
-            fetchPrices(); 
-        });
-    }
-
-    function saveToCloud() {
-        const user = auth.currentUser;
-        if (!user) return;
-        document.getElementById('sync-status').innerText = "● Saving...";
-        db.ref('users/' + user.uid + '/trades').set(trades);
-    }
-
-    function toggleTheme() {
-        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme-preference', next);
-        render();
-    }
 
     async function fetchPrices() {
         try {
@@ -235,16 +204,13 @@
             const inv = t.amount * (t.buyPrice * rate);
             const val = t.amount * (meta.price * rate);
             totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
-            return { ...t, id: symbolKey, currentPrice: meta.price * rate, inv, val, logo: meta.logo, originalIndex: idx };
+            return { ...t, id: symbolKey, cp: meta.price * rate, inv, val, logo: meta.logo, originalIndex: idx };
         });
 
         const groups = {};
         processed.forEach(t => {
             if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, trades: [] };
-            groups[t.id].amount += t.amount;
-            groups[t.id].inv += t.inv;
-            groups[t.id].val += t.val;
-            groups[t.id].trades.push(t);
+            groups[t.id].amount += t.amount; groups[t.id].inv += t.inv; groups[t.id].val += t.val; groups[t.id].trades.push(t);
         });
 
         Object.values(groups).forEach(g => { tInv += g.inv; tVal += g.val; if(g.val > 0) chartData[g.id] = g.val; });
@@ -256,28 +222,19 @@
             return sortAsc ? (valA < valB ? -1 : 1) : (valA > valB ? -1 : 1);
         }).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
+            const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
             tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
-                <td><div class="asset-cell">
-                    ${isGrouped ? `<span class="expand-icon">${expandedAssets.has(d.symbol)?'▼':'▶'}</span>` : ''}
-                    <img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'">
-                    <span>${d.symbol}</span>
-                </div></td>
-                <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
-                <td>${d.date || '-'}</td>
-                <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
-                <td>${sym}${d.inv.toLocaleString()}</td>
-                <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
-                <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
-                <td class="action-btns">
-                    <button class="btn-edit" onclick="event.stopPropagation(); editTrade(${isGrouped ? -1 : d.originalIndex})">✎</button>
-                    <button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button>
-                </td>
+                <td><div class="asset-cell">${isGrouped ? `<span class="expand-icon">${isExpanded?'▼':'▶'}</span>`:''}<img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
+                <td>${sym}${d.cp ? d.cp.toLocaleString(undefined,{minimumFractionDigits:2}) : '0.00'}</td>
+                <td>${d.date || '-'}</td><td>${d.amount.toLocaleString()}</td>
+                <td>${sym}${(d.inv/d.amount || 0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:4})}</td>
+                <td>${sym}${d.inv.toLocaleString()}</td><td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td><td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
+                <td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${isGrouped ? -1 : d.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button></td>
             </tr>`;
-            if (isGrouped && expandedAssets.has(d.symbol)) {
+            if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.cp.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
                 });
             }
         });
@@ -295,11 +252,8 @@
         updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/tVal*100).toFixed(1)}%)`), Object.values(chartData));
     }
 
-    function toggleDrillDown(symbol) {
-        if (expandedAssets.has(symbol)) expandedAssets.delete(symbol);
-        else expandedAssets.add(symbol);
-        render();
-    }
+    function toggleDrillDown(s) { if (expandedAssets.has(s)) expandedAssets.delete(s); else expandedAssets.add(s); render(); }
+    function saveToCloud() { const user = auth.currentUser; if (user) db.ref('users/' + user.uid + '/trades').set(trades); }
 
     function removeTrade(id, index) {
         showConfirm("Delete Entry", `Delete ${id}?`, [{ label: 'Cancel' }, { label: 'Confirm', className: 'btn-add', callback: () => {
@@ -355,6 +309,13 @@
         saveToCloud();
     }
 
+    function toggleTheme() {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme-preference', next);
+        render();
+    }
+
     function updateChart(l, v) {
         if (myChart) myChart.destroy();
         myChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
@@ -378,7 +339,7 @@
         modal.style.display = 'flex';
     }
 
-    function setSort(key) { sortKey = key; sortAsc = !sortAsc; render(); }
+    function setSort(key) { if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; } render(); }
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
