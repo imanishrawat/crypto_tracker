@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v2.0.0</title>
+    <title>Crypto Global Portfolio v2.0.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -16,7 +16,6 @@
         :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.5); }
         [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.7); }
         
-        /* PREVENT HORIZONTAL SCROLL ON MOBILE */
         html, body { overflow-x: hidden; width: 100%; margin: 0; padding: 0; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); padding: 15px; color: var(--text); transition: 0.3s; box-sizing: border-box; }
         
@@ -27,7 +26,7 @@
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
 
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 25px; width: 100%; }
-        .card { padding: 15px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; overflow: hidden; }
+        .card { padding: 15px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .card strong { font-size: 20px; display: block; word-break: break-all; }
         
         .form-grid { display: flex; gap: 15px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; align-items: flex-end; flex-wrap: wrap; }
@@ -39,7 +38,6 @@
         .btn-refresh { background: var(--success); }
         .btn-cancel { background: var(--danger) !important; color: white; }
 
-        /* FIXED DASHBOARD GRID FOR LAPTOP/MOBILE */
         .dashboard-grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 20px; align-items: start; }
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
@@ -53,9 +51,9 @@
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
         
-        /* FIXED CHART RESPONSIVENESS */
-        .chart-container { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-sizing: border-box; width: 100%; }
-        .chart-wrapper { position: relative; height: 300px; width: 100%; margin: 0 auto; }
+        /* IMPROVED CHART CONTAINER */
+        .chart-container { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); width: 100%; min-height: 350px; }
+        .chart-wrapper { position: relative; height: 300px; width: 100%; }
 
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -178,12 +176,12 @@
     });
 
     function login() { auth.signInWithPopup(provider); }
-    function logout() { auth.signOut().then(() => location.reload()); }
+    function logout() { auth.signOut().then(() => { localStorage.clear(); location.reload(); }); }
 
     function startSync(uid) {
         db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
             trades = snapshot.val() || [];
-            document.getElementById('sync-status').innerText = "● Synced " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('sync-status').innerText = "● Cloud Synced";
             fetchPrices(); 
         });
     }
@@ -265,7 +263,7 @@
             if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:30px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:25px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
                 });
             }
         });
@@ -281,8 +279,11 @@
         dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
         document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
         
-        const chartTotal = Object.values(chartData).reduce((a,b) => a+b, 0);
-        updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/chartTotal*100).toFixed(1)}%)`), Object.values(chartData));
+        // FIXED LAPTOP CHART RENDER: Added delay to ensure container is visible
+        setTimeout(() => {
+            const chartTotal = Object.values(chartData).reduce((a,b) => a+b, 0);
+            updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/chartTotal*100).toFixed(1)}%)`), Object.values(chartData));
+        }, 150);
     }
 
     function toggleDrillDown(symbol) { if (expandedAssets.has(symbol)) expandedAssets.delete(symbol); else expandedAssets.add(symbol); render(); }
@@ -334,7 +335,12 @@
         if (myChart) myChart.destroy();
         myChart = new Chart(canvas.getContext('2d'), {
             type: 'doughnut', data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c','#fd7e14','#20c997'], borderWidth: 0 }] },
-            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true, padding: 15 } } } }
+            options: { 
+                cutout: '65%', 
+                maintainAspectRatio: false, 
+                aspectRatio: 1, // FORCE SQUARE RATIO FOR LAPTOPS
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true, padding: 15 } } } 
+            }
         });
     }
 
