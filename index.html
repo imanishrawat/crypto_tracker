@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.7</title>
+    <title>Crypto Global Portfolio v1.9.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Apply theme immediately to prevent white flash
         const savedTheme = localStorage.getItem('theme-preference') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
@@ -18,45 +17,34 @@
         [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.7); }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); transition: 0.3s; }
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box; }
-        
-        /* FIXED MOBILE HEADER BUTTONS */
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
         .nav-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        
         .theme-toggle { background: #555; color: white; border: none; padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 11px; font-weight: bold; }
         select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card { padding: 20px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .card strong { font-size: 22px; display: block; }
-        
         .form-grid { display: flex; gap: 15px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; align-items: flex-end; flex-wrap: wrap; }
         .form-grid > div { flex: 1; min-width: 200px; }
-        
         input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
         .btn { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; white-space: nowrap; }
         .btn-add { background: var(--primary); }
         .btn-refresh { background: var(--success); }
         .btn-cancel { background: var(--danger) !important; color: white; }
-        
         .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; text-align: left; color: #666; cursor: pointer; }
         td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        
         .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
-        
         .action-btns { display: flex; gap: 8px; }
         .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
-        
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s; }
-        .google-btn:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
-        
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
     </style>
@@ -134,8 +122,8 @@
                 <tbody id="portfolioBody"></tbody>
             </table>
         </div>
-        <div class="chart-container">
-            <h4 style="margin:0; font-size:14px; text-align:center; padding-bottom:10px;">Allocation (Crypto Only)</h4>
+        <div class="chart-container" style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border);">
+            <h4 style="margin:0; font-size:14px; text-align:center; padding-bottom:15px;">Allocation (Crypto Only)</h4>
             <div style="height: 300px;"><canvas id="allocationChart"></canvas></div>
         </div>
     </div>
@@ -235,7 +223,6 @@
         Object.values(groups).forEach(g => { 
             tInv += g.inv; 
             tVal += g.val; 
-            // FIXED: EXCLUDE USDT FROM CHART DATA
             if(g.val > 0 && g.id !== 'USDT') chartData[g.id] = g.val; 
         });
 
@@ -282,7 +269,6 @@
         dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
         document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
         
-        // Final total for chart labels
         const chartTotal = Object.values(chartData).reduce((a,b) => a+b, 0);
         updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/chartTotal*100).toFixed(1)}%)`), Object.values(chartData));
     }
@@ -354,7 +340,6 @@
     }
     function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
     
-    // FIXED THEME TOGGLE WITH LOCALSTORAGE
     function toggleTheme() {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
