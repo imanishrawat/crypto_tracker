@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v2.0.1</title>
+    <title>Crypto Global Portfolio v2.0.2</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -28,8 +28,10 @@
             .form-grid > div { min-width: 100%; }
             .header-flex { flex-direction: column; align-items: stretch; }
             .nav-btns { justify-content: center; width: 100%; }
-            .modal-content { width: 95% !important; padding: 15px !important; max-height: 80vh; overflow-y: auto; }
-            .modal-buttons { flex-direction: column; }
+            /* Mobile Fix for Modal stuck/overflow */
+            .modal-content { width: 95% !important; padding: 15px !important; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
+            .modal-buttons { flex-direction: column; gap: 10px; }
+            .modal-buttons .btn { width: 100%; margin: 0; }
         }
 
         input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
@@ -136,7 +138,6 @@
 </div>
 
 <script>
-    // Firebase Config (Kept from original)
     const firebaseConfig = {
         apiKey: "AIzaSyDq8E_O1Ie5D6T47O1eDA0kcDKZc9IOU6E",
         authDomain: "my-crypto-portfolio-98e37.firebaseapp.com",
@@ -160,7 +161,7 @@
     let sortKey = 'symbol', sortAsc = true, myChart = null;
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    // Persistent Login Logic
+    // Update 3: Persistent Login
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
         return auth.onAuthStateChanged((user) => {
             if (user) {
@@ -196,8 +197,9 @@
         if (user) db.ref('users/' + user.uid + '/trades').set(trades);
     }
 
-    function undo() { if (historyStack.length) { redoStack.push(JSON.stringify(trades)); trades = JSON.parse(historyStack.pop()); saveToCloud(false); } }
-    function redo() { if (redoStack.length) { historyStack.push(JSON.stringify(trades)); trades = JSON.parse(redoStack.pop()); saveToCloud(false); } }
+    // Update 2: Undo/Redo Functions
+    function undo() { if (historyStack.length) { redoStack.push(JSON.stringify(trades)); trades = JSON.parse(historyStack.pop()); saveToCloud(false); render(); } }
+    function redo() { if (redoStack.length) { historyStack.push(JSON.stringify(trades)); trades = JSON.parse(redoStack.pop()); saveToCloud(false); render(); } }
 
     async function fetchPrices() {
         try {
@@ -213,36 +215,41 @@
         } catch(e) { console.error(e); }
     }
 
-    // UPDATED BINANCE IMPORT (Handles the exact structure provided)
+    // Update 1: Dynamic Binance Import (Handles leading commas and multiple empty columns)
     function processCSV(rows, overwrite) {
         if (overwrite) { saveToCloud(true); trades = []; } else { saveToCloud(true); }
 
-        // The data starts after 11 lines of headers based on your provided format
-        // Finding the line that starts with "Time"
         const headerRowIndex = rows.findIndex(r => r.toLowerCase().includes('time') && r.toLowerCase().includes('pair'));
-        if (headerRowIndex === -1) { alert("Format not recognized. Please ensure 'Time' and 'Pair' headers are present."); return; }
+        if (headerRowIndex === -1) { alert("Format not recognized. Ensure 'Time' and 'Pair' headers are present."); return; }
+
+        const headerCols = rows[headerRowIndex].split(',').map(h => h.trim().toLowerCase());
+        const tIdx = headerCols.indexOf('time');
+        const pIdx = headerCols.indexOf('pair');
+        const sIdx = headerCols.indexOf('side');
+        const prIdx = headerCols.indexOf('price');
+        const eIdx = headerCols.indexOf('executed');
 
         const dataRows = rows.slice(headerRowIndex + 1);
-
         dataRows.forEach(row => {
-            const c = row.split(/\t|,/).map(v => v.trim()); // Split by Tab or Comma
-            if(c.length >= 6 && c[2] === 'BUY') {
-                const pair = c[1] || "";
-                const baseAsset = pair.replace('USDT', '').toUpperCase();
+            const c = row.split(',').map(v => v.trim());
+            if(c[sIdx] === 'BUY') {
+                const pair = c[pIdx] || "";
+                const baseAsset = pair.replace('USDT', '').replace('BUSD', '').toUpperCase();
+                const executedAmount = parseFloat((c[eIdx] || "0").replace(/[^\d.]/g, '')) || 0;
+                const price = parseFloat(c[prIdx]) || 0;
                 
-                // Extract amount (removes coin name from "741HBAR" -> 741)
-                const executedAmount = parseFloat(c[4]) || parseFloat(c[4].replace(/[^\d.]/g, ''));
-                const price = parseFloat(c[3]) || 0;
-                
-                trades.push({ 
-                    id: baseAsset, 
-                    date: c[0]?.split(' ')[0] || '', 
-                    amount: executedAmount, 
-                    buyPrice: price 
-                });
+                if (executedAmount > 0) {
+                    trades.push({ 
+                        id: baseAsset, 
+                        date: c[tIdx]?.split(' ')[0] || '', 
+                        amount: executedAmount, 
+                        buyPrice: price 
+                    });
+                }
             }
         });
         saveToCloud(false);
+        render();
     }
 
     function importCSV(e) {
@@ -255,6 +262,7 @@
                 { label: 'Add', className: 'btn-refresh', callback: () => { processCSV(rows, false); closeModal(); } },
                 { label: 'Overwrite', className: 'btn-add', callback: () => { processCSV(rows, true); closeModal(); } }
             ]);
+            e.target.value = ''; 
         };
         reader.readAsText(file);
     }
@@ -267,7 +275,7 @@
         const rate = usdRates[cur] || 1;
         const tbody = document.getElementById('portfolioBody');
         tbody.innerHTML = '';
-        let tInv = 0, tVal = 0, totalDailyPnL = 0, chartData = {};
+        let tInv = 0, tVal = 0, chartData = {};
 
         const processed = trades.map((t, idx) => {
             const symbolKey = t.id.toUpperCase();
@@ -275,13 +283,12 @@
             const inv = t.amount * (t.buyPrice * rate);
             const cp = meta.price * rate;
             const val = t.amount * cp;
-            totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
             return { ...t, id: symbolKey, currentPrice: cp, inv, val, logo: meta.logo, originalIndex: idx };
         });
 
         const groups = {};
         processed.forEach(t => {
-            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice, trades: [] };
+            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice };
             groups[t.id].amount += t.amount; groups[t.id].inv += t.inv; groups[t.id].val += t.val; 
         });
 
@@ -292,13 +299,13 @@
         displayData.filter(d => d.symbol.toLowerCase().includes(search)).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
             tbody.innerHTML += `<tr>
-                <td><div class="asset-cell"><img class="asset-logo" src="${d.logo}"><span>${d.symbol}</span></div></td>
-                <td>${sym}${d.currentPrice.toLocaleString()}</td>
+                <td><div class="asset-cell"><img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
+                <td>${sym}${d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                 <td>${d.date || '-'}</td>
                 <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${(d.inv / d.amount || 0).toFixed(4)}</td>
-                <td>${sym}${d.inv.toLocaleString()}</td>
-                <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
+                <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined, {maximumFractionDigits: 4})}</td>
+                <td>${sym}${d.inv.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+                <td class="${pClass}">${sym}${d.pnl.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                 <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
                 <td><button onclick="removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})" style="color:red; background:none; border:none; cursor:pointer;">×</button></td>
             </tr>`;
@@ -306,6 +313,11 @@
 
         document.getElementById('totalInvested').innerText = sym + Math.round(tInv).toLocaleString();
         document.getElementById('totalValue').innerText = sym + Math.round(tVal).toLocaleString();
+        const growth = tVal - tInv;
+        document.getElementById('totalGrowth').innerText = (tInv > 0 ? (growth/tInv*100).toFixed(2) : 0) + '%';
+        document.getElementById('totalGrowthAmount').innerText = (growth >= 0 ? '+' : '') + sym + Math.round(growth).toLocaleString();
+        document.getElementById('totalGrowthAmount').className = growth >= 0 ? 'profit' : 'loss';
+        
         updateChart(Object.keys(chartData), Object.values(chartData));
     }
 
@@ -314,8 +326,8 @@
         const ctx = document.getElementById('allocationChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'doughnut', 
-            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8'] }] },
-            options: { responsive: true, maintainAspectRatio: false }
+            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2'] }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
         });
     }
 
@@ -333,24 +345,32 @@
         });
         modal.style.display = 'flex';
     }
+
     function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
+    
     function saveUsdtP2P() {
         const amt = parseFloat(document.getElementById('holdings').value);
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
         if (isNaN(amt)) return;
         trades.push({ id: 'USDT', amount: amt, buyPrice: 1.0, date: date });
         saveToCloud();
+        document.getElementById('holdings').value = '';
     }
+
     function removeTrade(id, index) {
+        saveToCloud(true);
         if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
-        saveToCloud();
+        saveToCloud(false);
     }
+
     function toggleTheme() {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme-preference', next);
     }
+
     function setSort(k) { if(sortKey===k) sortAsc=!sortAsc; else {sortKey=k; sortAsc=true;} render(); }
+    
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
         const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
