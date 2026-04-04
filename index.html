@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.9</title>
+    <title>Crypto Global Portfolio v2.0.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.5); }
-        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.7); }
+        :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.6); }
+        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.8); }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); transition: 0.3s; }
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
@@ -50,9 +50,13 @@
         .action-btns { display: flex; gap: 8px; }
         .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
         .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
-        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
+        /* Fixed Modal Styles */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); justify-content:center; align-items:center; z-index:5000; }
+        .modal-content { background:var(--card-bg); padding:25px; border-radius:16px; max-width:450px; width:90%; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
         .chart-wrapper { position: relative; height: 350px; width: 100%; }
@@ -73,11 +77,11 @@
     </button>
 </div>
 
-<div id="confirmModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); justify-content:center; align-items:center; z-index:1000;">
-    <div class="modal-content" style="background:var(--card-bg); padding:25px; border-radius:16px; max-width:450px; width:90%; text-align:center;">
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
         <h3 id="modalTitle">Confirm Action</h3>
         <p id="modalMessage"></p>
-        <div id="modalBtnContainer" class="modal-buttons" style="display:flex; gap:10px; margin-top:20px; justify-content:center;"></div>
+        <div id="modalBtnContainer" style="display:flex; gap:10px; margin-top:20px; justify-content:center;"></div>
     </div>
 </div>
 
@@ -203,7 +207,6 @@
     function startSync(uid) {
         db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
             const newTrades = snapshot.val() || [];
-            // Only update history if external sync actually changed the data
             if (JSON.stringify(newTrades) !== JSON.stringify(trades)) {
                 trades = newTrades;
                 document.getElementById('sync-status').innerText = "● Cloud Synced";
@@ -223,7 +226,6 @@
         if (user) db.ref('users/' + user.uid + '/trades').set(trades);
     }
 
-    // --- UNDO / REDO LOGIC ---
     function pushToUndoStack() {
         undoStack.push(JSON.stringify(trades));
         if (undoStack.length > MAX_HISTORY) undoStack.shift();
@@ -252,7 +254,6 @@
         document.getElementById('redoBtn').disabled = redoStack.length === 0;
     }
 
-    // Shortcut Keys
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
         if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
@@ -303,7 +304,7 @@
         Object.values(groups).forEach(g => { 
             g.pnl = g.val - g.inv; 
             g.pnlPct = g.inv > 0 ? (g.pnl / g.inv) * 100 : 0;
-            g.date = g.trades.length > 0 ? g.trades.sort((a,b) => new Date(b.date) - new Date(a.date))[0].date : ''; // Newest date for group
+            g.date = g.trades.length > 0 ? g.trades.sort((a,b) => new Date(b.date) - new Date(a.date))[0].date : '';
             tInv += g.inv; tVal += g.val; if(g.val > 0) chartData[g.id] = g.val; 
         });
 
@@ -354,6 +355,7 @@
     }
 
     function toggleDrillDown(symbol) { if (expandedAssets.has(symbol)) expandedAssets.delete(symbol); else expandedAssets.add(symbol); render(); }
+    
     function saveUsdtP2P() {
         const amt = parseFloat(document.getElementById('holdings').value);
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
@@ -375,7 +377,7 @@
         reader.onload = (f) => {
             const rows = f.target.result.split('\n');
             showConfirm("Import CSV", "How to handle import?", [
-                { label: 'Cancel' },
+                { label: 'Cancel', callback: closeModal },
                 { label: 'Add', className: 'btn-refresh', callback: () => { processCSV(rows, false); closeModal(); } },
                 { label: 'Overwrite', className: 'btn-add', callback: () => { processCSV(rows, true); closeModal(); } }
             ]);
@@ -412,14 +414,8 @@
         const ctx = document.getElementById('allocationChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'doughnut', 
-            data: { 
-                labels: l, 
-                datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] 
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false, cutout: '65%', 
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
-            }
+            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
         });
     }
 
