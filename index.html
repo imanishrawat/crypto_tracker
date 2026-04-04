@@ -1,4 +1,3 @@
-GitHub last 
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +52,6 @@ GitHub last
         @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
         #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
 
-        /* FIXED: Allocation Chart Wrapper for Desktop Visibility */
         .chart-wrapper { position: relative; height: 350px; width: 100%; }
     </style>
 </head>
@@ -266,7 +264,7 @@ GitHub last
             if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(t.originalIndex)">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade(t.id, t.originalIndex)">×</button></td></tr>`;
                 });
             }
         });
@@ -318,15 +316,37 @@ GitHub last
     function processCSV(rows, overwrite) {
         if (overwrite) trades = [];
         const h = rows[0].split(',');
-        const dIdx = h.findIndex(x => x.includes('Date')), sIdx = h.findIndex(x => x.includes('Base Asset')), aIdx = h.findIndex(x => x.includes('Filled')), pIdx = h.findIndex(x => x.includes('AvgTrading Price')), tIdx = h.findIndex(x => x.includes('Type'));
+        
+        // Find column indices for the new Binance CSV format: Time, Pair, Side, Price, Executed
+        const dIdx = h.findIndex(x => x.trim().includes('Time'));      
+        const sIdx = h.findIndex(x => x.trim().includes('Pair'));      
+        const tIdx = h.findIndex(x => x.trim().includes('Side'));      
+        const pIdx = h.findIndex(x => x.trim().includes('Price'));     
+        const aIdx = h.findIndex(x => x.trim().includes('Executed'));  
+
         rows.slice(1).forEach(row => {
             const c = row.split(',');
-            if(c.length > 5 && c[tIdx]?.includes('BUY')) trades.push({ id: c[sIdx].trim().toUpperCase(), date: c[dIdx]?.split(' ')[0] || '', amount: parseFloat(c[aIdx]) || 0, buyPrice: parseFloat(c[pIdx]) || 0 });
+            // We only import BUY transactions based on the 'Side' column
+            if(c.length >= 5 && c[tIdx]?.toUpperCase().includes('BUY')) {
+                // Remove 'USDT' from Pair to get base asset (e.g. BTCUSDT -> BTC)
+                let symbol = (c[sIdx] || '').replace('USDT', '').trim().toUpperCase();
+                
+                // Extract Date and handle YY-MM-DD to YYYY conversion
+                let date = c[dIdx]?.split(' ')[0] || '';
+                if (date.length === 8 && date.includes('-')) date = '20' + date; 
+
+                // parseFloat handles quantity strings like "741HBAR" by taking just the number
+                let amount = parseFloat(c[aIdx]) || 0;
+                let buyPrice = parseFloat(c[pIdx]) || 0;
+
+                if (symbol && amount > 0) {
+                    trades.push({ id: symbol, date: date, amount: amount, buyPrice: buyPrice });
+                }
+            }
         });
         saveToCloud();
     }
 
-    // FIXED CHART SETTINGS FOR LAPTOP VISIBILITY
     function updateChart(l, v) {
         if (myChart) myChart.destroy();
         const ctx = document.getElementById('allocationChart').getContext('2d');
@@ -338,7 +358,7 @@ GitHub last
             },
             options: { 
                 responsive: true,
-                maintainAspectRatio: false, // Forces chart to respect .chart-wrapper height
+                maintainAspectRatio: false, 
                 cutout: '65%', 
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
             }
