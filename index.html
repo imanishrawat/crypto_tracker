@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v1.9.8</title>
+    <title>Crypto Global Portfolio v1.9.9</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -38,6 +38,7 @@
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; text-align: left; color: #666; cursor: pointer; }
+        th:hover { background: rgba(0,0,0,0.08); }
         td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
         .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
@@ -82,6 +83,8 @@
     <div class="header-flex">
         <h1 style="margin:0">📊 Portfolio <span id="sync-status">● Offline</span></h1>
         <div class="nav-btns">
+            <button class="btn" style="background:#6c757d; font-size:11px;" id="undoBtn" onclick="undo()" disabled>↩ Undo</button>
+            <button class="btn" style="background:#6c757d; font-size:11px;" id="redoBtn" onclick="redo()" disabled>↪ Redo</button>
             <button class="btn" style="background:#555; font-size:11px;" onclick="logout()">🚪 Logout</button>
             <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update Prices</button>
             <select id="currencySelector" onchange="render()">
@@ -130,7 +133,17 @@
         <div class="table-wrapper">
             <table>
                 <thead>
-                    <tr><th onclick="setSort('symbol')">Asset</th><th onclick="setSort('currentPrice')">Price</th><th>Date</th><th>Holdings</th><th>Avg Buy</th><th>Invested</th><th>PnL</th><th>%</th><th>Actions</th></tr>
+                    <tr>
+                        <th onclick="setSort('symbol')">Asset ↕</th>
+                        <th onclick="setSort('currentPrice')">Price ↕</th>
+                        <th onclick="setSort('date')">Date ↕</th>
+                        <th onclick="setSort('amount')">Holdings ↕</th>
+                        <th onclick="setSort('buyPrice')">Avg Buy ↕</th>
+                        <th onclick="setSort('inv')">Invested ↕</th>
+                        <th onclick="setSort('pnl')">PnL ↕</th>
+                        <th onclick="setSort('pnlPct')">% ↕</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody id="portfolioBody"></tbody>
             </table>
@@ -162,6 +175,8 @@
     const provider = new firebase.auth.GoogleAuthProvider();
 
     let trades = []; 
+    let undoStack = [];
+    let redoStack = [];
     let assetMetadata = {}; 
     let usdRates = { usd: 1, aed: 3.67, eur: 0.92, inr: 83.0 };
     let sortKey = 'symbol', sortAsc = true, myChart = null;
@@ -183,16 +198,56 @@
 
     function startSync(uid) {
         db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
-            trades = snapshot.val() || [];
+            const newTrades = snapshot.val() || [];
+            // Handle cloud sync without breaking undo/redo logic unnecessarily
+            if (JSON.stringify(newTrades) !== JSON.stringify(trades)) {
+                trades = newTrades;
+                updatePriceAndRender();
+            }
             document.getElementById('sync-status').innerText = "● Cloud Synced";
             document.getElementById('sync-status').style.color = "var(--success)";
-            fetchPrices(); 
         });
     }
 
-    function saveToCloud() {
+    function updatePriceAndRender() {
+        if (Object.keys(assetMetadata).length === 0) fetchPrices();
+        else render();
+    }
+
+    function saveToCloud(isUndoRedo = false) {
         const user = auth.currentUser;
-        if (user) db.ref('users/' + user.uid + '/trades').set(trades);
+        if (!user) return;
+
+        if (!isUndoRedo) {
+            undoStack.push(JSON.stringify(trades));
+            redoStack = []; // Clear redo on new action
+            updateUndoRedoButtons();
+        }
+        
+        db.ref('users/' + user.uid + '/trades').set(trades);
+    }
+
+    function undo() {
+        if (undoStack.length === 0) return;
+        redoStack.push(JSON.stringify(trades));
+        trades = JSON.parse(undoStack.pop());
+        saveToCloud(true);
+        updateUndoRedoButtons();
+        render();
+    }
+
+    function redo() {
+        if (redoStack.length === 0) return;
+        undoStack.push(JSON.stringify(trades));
+        trades = JSON.parse(redoStack.pop());
+        saveToCloud(true);
+        updateUndoRedoButtons();
+        render();
+    }
+
+    function updateUndoRedoButtons() {
+        document.getElementById('undoBtn').disabled = undoStack.length === 0;
+        document.getElementById('redoBtn').disabled = redoStack.length === 0;
     }
 
     async function fetchPrices() {
@@ -225,33 +280,49 @@
             const inv = t.amount * (t.buyPrice * rate);
             const cp = meta.price * rate;
             const val = t.amount * cp;
+            const pnl = val - inv;
+            const pnlPct = inv > 0 ? (val - inv) / inv * 100 : 0;
             totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
-            return { ...t, id: symbolKey, currentPrice: cp, inv, val, logo: meta.logo, originalIndex: idx };
+            return { ...t, id: symbolKey, currentPrice: cp, inv, val, pnl, pnlPct, logo: meta.logo, originalIndex: idx };
         });
 
         const groups = {};
         processed.forEach(t => {
-            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice, trades: [] };
-            groups[t.id].amount += t.amount; groups[t.id].inv += t.inv; groups[t.id].val += t.val; groups[t.id].trades.push(t);
+            if (!groups[t.id]) groups[t.id] = { id: t.id, symbol: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice, trades: [], date: t.date, buyPrice: 0, pnl: 0, pnlPct: 0 };
+            groups[t.id].amount += t.amount; 
+            groups[t.id].inv += t.inv; 
+            groups[t.id].val += t.val; 
+            groups[t.id].trades.push(t);
         });
 
-        Object.values(groups).forEach(g => { tInv += g.inv; tVal += g.val; if(g.val > 0) chartData[g.id] = g.val; });
+        Object.values(groups).forEach(g => { 
+            tInv += g.inv; 
+            tVal += g.val; 
+            g.buyPrice = g.inv / g.amount;
+            g.pnl = g.val - g.inv;
+            g.pnlPct = g.inv > 0 ? (g.val - g.inv)/g.inv*100 : 0;
+            if(g.val > 0) chartData[g.id] = g.val; 
+        });
 
-        let displayData = isGrouped ? Object.values(groups).map(g => ({ ...g, symbol: g.id, pnl: g.val - g.inv, pnlPct: g.inv > 0 ? (g.val - g.inv)/g.inv*100 : 0 })) : processed.map(t => ({ ...t, symbol: t.id, pnl: t.val - t.inv, pnlPct: t.inv > 0 ? (t.val - t.inv)/t.inv*100 : 0 }));
+        let displayData = isGrouped ? Object.values(groups) : processed;
 
         displayData.filter(d => d.symbol.toLowerCase().includes(search)).sort((a,b) => {
             let valA = a[sortKey], valB = b[sortKey];
+            if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
             return sortAsc ? (valA < valB ? -1 : 1) : (valA > valB ? -1 : 1);
         }).forEach(d => {
             const pClass = d.pnl >= 0 ? 'profit' : 'loss';
             const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
             
-            tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
+            tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}" style="cursor:pointer">
                 <td><div class="asset-cell">${isGrouped ? `<span class="expand-icon">${isExpanded?'▼':'▶'}</span>` : ''}<img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
                 <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
                 <td>${d.date || '-'}</td>
                 <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
+                <td>${sym}${d.buyPrice.toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
                 <td>${sym}${d.inv.toLocaleString()}</td>
                 <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
                 <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
@@ -264,7 +335,7 @@
             if (isExpanded) {
                 d.trades.forEach(t => {
                     const rowPnl = t.val - t.inv;
-                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(t.originalIndex)">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade(t.id, t.originalIndex)">×</button></td></tr>`;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
                 });
             }
         });
@@ -283,14 +354,22 @@
     }
 
     function toggleDrillDown(symbol) { if (expandedAssets.has(symbol)) expandedAssets.delete(symbol); else expandedAssets.add(symbol); render(); }
+    
     function saveUsdtP2P() {
         const amt = parseFloat(document.getElementById('holdings').value);
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
         const editIdx = parseInt(document.getElementById('editIndex').value);
         if (isNaN(amt)) return;
+        
+        undoStack.push(JSON.stringify(trades)); 
+        redoStack = [];
+
         const tradeData = { id: 'USDT', amount: amt, buyPrice: 1.0, date: date };
         if (editIdx > -1) trades[editIdx] = tradeData; else trades.push(tradeData);
-        saveToCloud(); resetForm();
+        
+        saveToCloud(true); // pass true because stack was handled manually here for specific order
+        updateUndoRedoButtons();
+        resetForm();
     }
 
     function resetForm() {
@@ -314,10 +393,11 @@
     }
 
     function processCSV(rows, overwrite) {
+        undoStack.push(JSON.stringify(trades));
+        redoStack = [];
+        
         if (overwrite) trades = [];
         const h = rows[0].split(',');
-        
-        // Find column indices for the new Binance CSV format: Time, Pair, Side, Price, Executed
         const dIdx = h.findIndex(x => x.trim().includes('Time'));      
         const sIdx = h.findIndex(x => x.trim().includes('Pair'));      
         const tIdx = h.findIndex(x => x.trim().includes('Side'));      
@@ -326,25 +406,17 @@
 
         rows.slice(1).forEach(row => {
             const c = row.split(',');
-            // We only import BUY transactions based on the 'Side' column
             if(c.length >= 5 && c[tIdx]?.toUpperCase().includes('BUY')) {
-                // Remove 'USDT' from Pair to get base asset (e.g. BTCUSDT -> BTC)
                 let symbol = (c[sIdx] || '').replace('USDT', '').trim().toUpperCase();
-                
-                // Extract Date and handle YY-MM-DD to YYYY conversion
                 let date = c[dIdx]?.split(' ')[0] || '';
                 if (date.length === 8 && date.includes('-')) date = '20' + date; 
-
-                // parseFloat handles quantity strings like "741HBAR" by taking just the number
                 let amount = parseFloat(c[aIdx]) || 0;
                 let buyPrice = parseFloat(c[pIdx]) || 0;
-
-                if (symbol && amount > 0) {
-                    trades.push({ id: symbol, date: date, amount: amount, buyPrice: buyPrice });
-                }
+                if (symbol && amount > 0) trades.push({ id: symbol, date: date, amount: amount, buyPrice: buyPrice });
             }
         });
-        saveToCloud();
+        saveToCloud(true);
+        updateUndoRedoButtons();
     }
 
     function updateChart(l, v) {
@@ -388,8 +460,12 @@
     }
     function removeTrade(id, index) {
         showConfirm("Delete Entry", `Delete ${id}?`, [{ label: 'Cancel', callback: closeModal }, { label: 'Confirm', className: 'btn-add', callback: () => {
+            undoStack.push(JSON.stringify(trades));
+            redoStack = [];
             if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
-            saveToCloud(); closeModal();
+            saveToCloud(true); 
+            updateUndoRedoButtons();
+            closeModal();
         }}]);
     }
     function setSort(key) { if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; } render(); }
