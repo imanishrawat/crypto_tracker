@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v2.0.2</title>
+    <title>Crypto Global Portfolio v2.0.3</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.5); }
@@ -28,8 +29,9 @@
             .form-grid > div { min-width: 100%; }
             .header-flex { flex-direction: column; align-items: stretch; }
             .nav-btns { justify-content: center; width: 100%; }
-            /* Mobile Fix for Modal stuck/overflow */
-            .modal-content { width: 95% !important; padding: 15px !important; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
+            /* Mobile Modal Fix */
+            .modal-overlay { padding: 15px; box-sizing: border-box; }
+            .modal-content { width: 100% !important; padding: 20px !important; max-height: 90vh; overflow-y: auto; }
             .modal-buttons { flex-direction: column; gap: 10px; }
             .modal-buttons .btn { width: 100%; margin: 0; }
         }
@@ -49,7 +51,6 @@
         .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
-        .action-btns { display: flex; gap: 8px; }
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .chart-wrapper { position: relative; height: 350px; width: 100%; }
@@ -71,8 +72,8 @@
 </div>
 
 <div id="confirmModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); justify-content:center; align-items:center; z-index:3000;">
-    <div class="modal-content" style="background:var(--card-bg); padding:25px; border-radius:16px; max-width:450px; width:90%; text-align:center;">
-        <h3 id="modalTitle">Confirm</h3>
+    <div class="modal-content" style="background:var(--card-bg); padding:25px; border-radius:16px; max-width:450px; width:90%; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h3 id="modalTitle">Confirm Action</h3>
         <p id="modalMessage"></p>
         <div id="modalBtnContainer" class="modal-buttons" style="display:flex; gap:10px; margin-top:20px; justify-content:center;"></div>
     </div>
@@ -105,18 +106,18 @@
 
     <div class="form-grid">
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <div style="flex: 1;"><label>Date</label><input type="date" id="tradeDate"></div>
-            <div style="flex: 1;"><label>Add USDT (P2P)</label><input type="number" id="holdings" placeholder="0.00"></div>
+            <div style="flex: 1;"><label style="font-size:11px;font-weight:bold;">Date</label><input type="date" id="tradeDate"></div>
+            <div style="flex: 1;"><label style="font-size:11px;font-weight:bold;">Add USDT (P2P)</label><input type="number" id="holdings" placeholder="0.00"></div>
             <button class="btn btn-add" id="submitBtn" onclick="saveUsdtP2P()" style="margin-top:20px">Save USDT</button>
         </div>
     </div>
 
     <div class="controls" style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
         <input type="text" id="searchInput" placeholder="🔍 Search coins..." onkeyup="render()" style="max-width:300px;">
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center;">
             <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export</button>
-            <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance</button>
-            <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
+            <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('fileInput').click()">📥 Import Binance</button>
+            <input type="file" id="fileInput" style="display:none" onchange="handleFile(event)">
             <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
         </div>
     </div>
@@ -131,13 +132,14 @@
             </table>
         </div>
         <div class="chart-container">
-            <h4 style="text-align:center;">Allocation</h4>
+            <h4 style="text-align:center; font-size:14px; margin:0 0 10px 0;">Allocation</h4>
             <div class="chart-wrapper"><canvas id="allocationChart"></canvas></div>
         </div>
     </div>
 </div>
 
 <script>
+    // Firebase Config (Kept from original)
     const firebaseConfig = {
         apiKey: "AIzaSyDq8E_O1Ie5D6T47O1eDA0kcDKZc9IOU6E",
         authDomain: "my-crypto-portfolio-98e37.firebaseapp.com",
@@ -161,7 +163,7 @@
     let sortKey = 'symbol', sortAsc = true, myChart = null;
     const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    // Update 3: Persistent Login
+    // Update 3: Persistent Login Logic
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
         return auth.onAuthStateChanged((user) => {
             if (user) {
@@ -180,7 +182,11 @@
 
     function startSync(uid) {
         db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
-            trades = snapshot.val() || [];
+            const data = snapshot.val() || [];
+            if (JSON.stringify(data) !== JSON.stringify(trades)) {
+                trades = data;
+                render();
+            }
             document.getElementById('sync-status').innerText = "● Cloud Synced";
             document.getElementById('sync-status').style.color = "var(--success)";
             fetchPrices(); 
@@ -197,9 +203,14 @@
         if (user) db.ref('users/' + user.uid + '/trades').set(trades);
     }
 
-    // Update 2: Undo/Redo Functions
+    // Update 2: Undo/Redo
     function undo() { if (historyStack.length) { redoStack.push(JSON.stringify(trades)); trades = JSON.parse(historyStack.pop()); saveToCloud(false); render(); } }
     function redo() { if (redoStack.length) { historyStack.push(JSON.stringify(trades)); trades = JSON.parse(redoStack.pop()); saveToCloud(false); render(); } }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') undo();
+        if (e.ctrlKey && e.key === 'y') redo();
+    });
 
     async function fetchPrices() {
         try {
@@ -208,41 +219,74 @@
             data.forEach(t => {
                 if (t.symbol.endsWith('USDT')) {
                     const base = t.symbol.replace('USDT', '');
-                    assetMetadata[base] = { price: parseFloat(t.lastPrice), openUTC: parseFloat(t.openPrice), logo: `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${base.toLowerCase()}.png` };
+                    assetMetadata[base] = { 
+                        price: parseFloat(t.lastPrice), 
+                        openUTC: parseFloat(t.openPrice), 
+                        logo: `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${base.toLowerCase()}.png` 
+                    };
                 }
             });
             render();
         } catch(e) { console.error(e); }
     }
 
-    // Update 1: Dynamic Binance Import (Handles leading commas and multiple empty columns)
-    function processCSV(rows, overwrite) {
+    // Update 1: Robust Excel/CSV Import
+    function handleFile(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            const data = new Uint8Array(f.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonRows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+            
+            showConfirm("Import Binance Data", "Choose how to handle the data:", [
+                { label: 'Cancel', callback: closeModal },
+                { label: 'Add', className: 'btn-refresh', callback: () => { processRawData(jsonRows, false); closeModal(); } },
+                { label: 'Overwrite', className: 'btn-add', callback: () => { processRawData(jsonRows, true); closeModal(); } }
+            ]);
+            e.target.value = ''; 
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function processRawData(rows, overwrite) {
         if (overwrite) { saveToCloud(true); trades = []; } else { saveToCloud(true); }
 
-        const headerRowIndex = rows.findIndex(r => r.toLowerCase().includes('time') && r.toLowerCase().includes('pair'));
-        if (headerRowIndex === -1) { alert("Format not recognized. Ensure 'Time' and 'Pair' headers are present."); return; }
+        // Find header row by searching for "Time" and "Pair" in any column
+        const headerRowIndex = rows.findIndex(r => 
+            Array.isArray(r) && 
+            r.some(cell => String(cell).toLowerCase().includes('time')) && 
+            r.some(cell => String(cell).toLowerCase().includes('pair'))
+        );
 
-        const headerCols = rows[headerRowIndex].split(',').map(h => h.trim().toLowerCase());
-        const tIdx = headerCols.indexOf('time');
-        const pIdx = headerCols.indexOf('pair');
-        const sIdx = headerCols.indexOf('side');
-        const prIdx = headerCols.indexOf('price');
-        const eIdx = headerCols.indexOf('executed');
+        if (headerRowIndex === -1) { 
+            alert("Format Error: Could not find 'Time' and 'Pair' headers. Ensure you are using the correct Binance Spot Trade History file."); 
+            return; 
+        }
 
-        const dataRows = rows.slice(headerRowIndex + 1);
-        dataRows.forEach(row => {
-            const c = row.split(',').map(v => v.trim());
-            if(c[sIdx] === 'BUY') {
-                const pair = c[pIdx] || "";
-                const baseAsset = pair.replace('USDT', '').replace('BUSD', '').toUpperCase();
-                const executedAmount = parseFloat((c[eIdx] || "0").replace(/[^\d.]/g, '')) || 0;
-                const price = parseFloat(c[prIdx]) || 0;
+        const header = rows[headerRowIndex].map(h => String(h || "").trim().toLowerCase());
+        const tIdx = header.findIndex(h => h.includes('time'));
+        const pIdx = header.findIndex(h => h.includes('pair'));
+        const sIdx = header.findIndex(h => h.includes('side'));
+        const prIdx = header.findIndex(h => h.includes('price'));
+        const eIdx = header.findIndex(h => h.includes('executed'));
+
+        rows.slice(headerRowIndex + 1).forEach(row => {
+            if (row[sIdx] && String(row[sIdx]).toUpperCase() === 'BUY') {
+                const pair = String(row[pIdx] || "").toUpperCase();
+                const baseAsset = pair.replace('USDT', '').replace('BUSD', '');
                 
-                if (executedAmount > 0) {
+                // Extract amount and remove non-numeric chars (e.g., "741HBAR" -> 741)
+                const amountStr = String(row[eIdx] || "0");
+                const amount = parseFloat(amountStr.replace(/[^\d.]/g, '')) || 0;
+                const price = parseFloat(row[prIdx]) || 0;
+                
+                if (amount > 0) {
                     trades.push({ 
                         id: baseAsset, 
-                        date: c[tIdx]?.split(' ')[0] || '', 
-                        amount: executedAmount, 
+                        date: String(row[tIdx] || "").split(' ')[0] || '', 
+                        amount: amount, 
                         buyPrice: price 
                     });
                 }
@@ -252,21 +296,7 @@
         render();
     }
 
-    function importCSV(e) {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            const rows = f.target.result.split('\n').filter(r => r.trim() !== "");
-            showConfirm("Import Binance", "How to handle data?", [
-                { label: 'Cancel', callback: closeModal },
-                { label: 'Add', className: 'btn-refresh', callback: () => { processCSV(rows, false); closeModal(); } },
-                { label: 'Overwrite', className: 'btn-add', callback: () => { processCSV(rows, true); closeModal(); } }
-            ]);
-            e.target.value = ''; 
-        };
-        reader.readAsText(file);
-    }
-
+    // UI & Render Functions
     function render() {
         const isGrouped = document.getElementById('groupToggle').checked;
         const search = document.getElementById('searchInput').value.toLowerCase();
@@ -275,7 +305,7 @@
         const rate = usdRates[cur] || 1;
         const tbody = document.getElementById('portfolioBody');
         tbody.innerHTML = '';
-        let tInv = 0, tVal = 0, chartData = {};
+        let tInv = 0, tVal = 0, totalDailyPnL = 0, chartData = {};
 
         const processed = trades.map((t, idx) => {
             const symbolKey = t.id.toUpperCase();
@@ -283,6 +313,7 @@
             const inv = t.amount * (t.buyPrice * rate);
             const cp = meta.price * rate;
             const val = t.amount * cp;
+            totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
             return { ...t, id: symbolKey, currentPrice: cp, inv, val, logo: meta.logo, originalIndex: idx };
         });
 
@@ -307,7 +338,7 @@
                 <td>${sym}${d.inv.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                 <td class="${pClass}">${sym}${d.pnl.toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
                 <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
-                <td><button onclick="removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})" style="color:red; background:none; border:none; cursor:pointer;">×</button></td>
+                <td><button onclick="removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})" style="color:red; background:none; border:none; cursor:pointer; font-weight:bold;">×</button></td>
             </tr>`;
         });
 
@@ -318,6 +349,11 @@
         document.getElementById('totalGrowthAmount').innerText = (growth >= 0 ? '+' : '') + sym + Math.round(growth).toLocaleString();
         document.getElementById('totalGrowthAmount').className = growth >= 0 ? 'profit' : 'loss';
         
+        const dpnl = document.getElementById('dailyPnL');
+        dpnl.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
+        dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
+        document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
+
         updateChart(Object.keys(chartData), Object.values(chartData));
     }
 
@@ -326,8 +362,8 @@
         const ctx = document.getElementById('allocationChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'doughnut', 
-            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2'] }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
         });
     }
 
@@ -344,10 +380,14 @@
             container.appendChild(b);
         });
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     }
 
-    function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
-    
+    function closeModal() { 
+        document.getElementById('confirmModal').style.display = 'none'; 
+        document.body.style.overflow = 'auto';
+    }
+
     function saveUsdtP2P() {
         const amt = parseFloat(document.getElementById('holdings').value);
         const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
@@ -358,9 +398,8 @@
     }
 
     function removeTrade(id, index) {
-        saveToCloud(true);
         if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
-        saveToCloud(false);
+        saveToCloud();
     }
 
     function toggleTheme() {
@@ -373,7 +412,7 @@
     
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
-        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
+        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
     }
 </script>
 </body>
