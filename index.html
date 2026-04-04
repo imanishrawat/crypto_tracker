@@ -1,75 +1,98 @@
+GitHub last 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Global Portfolio v2.0.4</title>
+    <title>Crypto Global Portfolio v1.9.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.6); }
-        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.8); }
+        :root { --primary: #0064e6; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card-bg: #ffffff; --text: #333333; --border: #eeeeee; --overlay: rgba(0, 0, 0, 0.5); }
+        [data-theme="dark"] { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --border: #333333; --overlay: rgba(0, 0, 0, 0.7); }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); transition: 0.3s; }
         .container { max-width: 1300px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
         .nav-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        
-        /* Modal Styles - High Compatibility */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(2px); }
-        .modal-content { background: var(--card-bg); padding: 30px; border-radius: 20px; max-width: 400px; width: 85%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); pointer-events: auto; }
-        .modal-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 25px; }
-        
+        .theme-toggle { background: #555; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        select { padding: 8px; border-radius: 8px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card { padding: 20px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border); text-align: center; }
         .card strong { font-size: 22px; display: block; }
         
         .form-grid { display: flex; gap: 20px; margin-bottom: 20px; background: rgba(0,100,230,0.05); padding: 20px; border-radius: 12px; align-items: flex-end; flex-wrap: wrap; }
         .form-grid > div { flex: 1; min-width: 250px; }
-        
         @media (max-width: 600px) { 
             .form-grid > div { min-width: 100%; }
             .header-flex { flex-direction: column; align-items: stretch; }
-            .nav-btns { justify-content: center; }
+            .nav-btns { justify-content: center; width: 100%; }
         }
 
-        input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); }
-        .btn { padding: 14px 18px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; }
         .btn-add { background: var(--primary); }
         .btn-refresh { background: var(--success); }
-        .btn-cancel { background: #888 !important; }
+        .btn-cancel { background: var(--danger) !important; color: white; }
         .dashboard-grid { display: grid; grid-template-columns: 1fr 350px; gap: 25px; margin-bottom: 20px; }
         .table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-align: left; cursor: pointer; }
+        th { background: rgba(0,0,0,0.04); padding: 15px; font-size: 11px; text-transform: uppercase; text-align: left; color: #666; cursor: pointer; }
         td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        .asset-logo { width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; }
+        .asset-cell { display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .asset-logo { width: 24px; height: 24px; border-radius: 50%; background: #eee; }
         .profit { color: var(--success); font-weight: bold; }
         .loss { color: var(--danger); font-weight: bold; }
+        .action-btns { display: flex; gap: 8px; }
+        .btn-edit { color: var(--primary); background: none; border: none; cursor: pointer; font-weight: bold; }
+        .btn-remove { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 18px; }
         #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .google-btn { background: #fff; color: #757575; border: 1px solid #ddd; padding: 12px 24px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        #sync-status { font-size: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
+
+        /* FIXED: Allocation Chart Wrapper for Desktop Visibility */
         .chart-wrapper { position: relative; height: 350px; width: 100%; }
     </style>
 </head>
 <body>
 
+<script>
+    const savedTheme = localStorage.getItem('theme-preference') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
+
 <div id="auth-screen">
-    <h1>📊 Portfolio Tracker</h1>
-    <p>Sign in to sync your data.</p>
-    <button class="btn btn-add" onclick="login()">Sign in with Google</button>
+    <h1 style="margin-bottom: 10px;">📊 Portfolio Tracker</h1>
+    <p>Sign in to sync your data across devices.</p>
+    <button class="google-btn" onclick="login()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="G"> Sign in with Google
+    </button>
+</div>
+
+<div id="confirmModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--overlay); justify-content:center; align-items:center; z-index:1000;">
+    <div class="modal-content" style="background:var(--card-bg); padding:25px; border-radius:16px; max-width:450px; width:90%; text-align:center;">
+        <h3 id="modalTitle">Confirm Action</h3>
+        <p id="modalMessage"></p>
+        <div id="modalBtnContainer" class="modal-buttons" style="display:flex; gap:10px; margin-top:20px; justify-content:center;"></div>
+    </div>
 </div>
 
 <div id="main-app" class="container" style="display:none;">
     <div class="header-flex">
         <h1 style="margin:0">📊 Portfolio <span id="sync-status">● Offline</span></h1>
         <div class="nav-btns">
-            <button class="btn" style="background:#6c757d; padding: 12px 14px;" title="Undo" onclick="undo()">⟲</button>
-            <button class="btn" style="background:#6c757d; padding: 12px 14px;" title="Redo" onclick="redo()">⟳</button>
-            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update</button>
-            <select id="currencySelector" onchange="render()"><option value="usd">USD</option><option value="aed">AED</option><option value="eur">EUR</option><option value="inr">INR</option></select>
-            <button class="btn" style="background:#555;" onclick="toggleTheme()">🌓 Theme</button>
-            <button class="btn" style="background:#d9534f;" onclick="logout()">🚪 Logout</button>
+            <button class="btn" style="background:#555; font-size:11px;" onclick="logout()">🚪 Logout</button>
+            <button class="btn btn-refresh" onclick="fetchPrices()">🔄 Update Prices</button>
+            <select id="currencySelector" onchange="render()">
+                <option value="usd">USD ($)</option>
+                <option value="aed">AED (د.إ)</option>
+                <option value="eur">EUR (€)</option>
+                <option value="inr">INR (₹)</option>
+            </select>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
         </div>
     </div>
 
@@ -80,40 +103,46 @@
         <div class="card"><span>Total Growth</span><strong id="totalGrowth">0%</strong><small id="totalGrowthAmount" style="display:block">0</small></div>
     </div>
 
+    <input type="hidden" id="editIndex" value="-1">
+
     <div class="form-grid">
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <div style="flex: 1;"><label>Date</label><input type="date" id="tradeDate"></div>
-            <div style="flex: 1;"><label>Add USDT (P2P)</label><input type="number" id="holdings" placeholder="0.00"></div>
-            <button class="btn btn-add" onclick="saveUsdtP2P()" style="margin-top:20px">Save USDT</button>
+        <div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 150px;"><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:5px;">Date</label><input type="date" id="tradeDate"></div>
+                <div style="flex: 1; min-width: 150px;"><label style="font-size:11px;font-weight:bold;display:block;margin-bottom:5px;">Add USDT (P2P)</label><input type="number" id="holdings" placeholder="0.00"></div>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-add" id="submitBtn" onclick="saveUsdtP2P()">Save USDT</button>
+            <button class="btn btn-cancel" id="cancelBtn" onclick="resetForm()" style="display:none">Cancel</button>
         </div>
     </div>
 
     <div class="controls" style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
         <input type="text" id="searchInput" placeholder="🔍 Search coins..." onkeyup="render()" style="max-width:300px;">
         <div style="display:flex; gap:10px; align-items:center;">
-            <button class="btn" style="background:#555;" onclick="exportCSV()">📤 Export</button>
-            <button class="btn" style="background:#555;" onclick="document.getElementById('fileInput').click()">📥 Import Binance</button>
-            <input type="file" id="fileInput" style="display:none" onchange="handleFile(event)">
-            <label><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
+            <button class="btn" style="background:#555; font-size:11px;" onclick="exportCSV()">📤 Export</button>
+            <button class="btn" style="background:#555; font-size:11px;" onclick="document.getElementById('csvFile').click()">📥 Import Binance</button>
+            <input type="file" id="csvFile" style="display:none" onchange="importCSV(event)">
+            <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="groupToggle" onchange="render()" checked> Group Assets</label>
         </div>
     </div>
 
     <div class="dashboard-grid">
         <div class="table-wrapper">
             <table>
-                <thead><tr><th>Asset</th><th>Price</th><th>Date</th><th>Holdings</th><th>Avg Buy</th><th>Invested</th><th>PnL</th><th>%</th><th>Actions</th></tr></thead>
+                <thead>
+                    <tr><th onclick="setSort('symbol')">Asset</th><th onclick="setSort('currentPrice')">Price</th><th>Date</th><th>Holdings</th><th>Avg Buy</th><th>Invested</th><th>PnL</th><th>%</th><th>Actions</th></tr>
+                </thead>
                 <tbody id="portfolioBody"></tbody>
             </table>
         </div>
-        <div class="chart-container"><div class="chart-wrapper"><canvas id="allocationChart"></canvas></div></div>
-    </div>
-</div>
-
-<div id="confirmModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 id="modalTitle" style="margin-top:0">Confirm Action</h3>
-        <p id="modalMessage"></p>
-        <div id="modalBtnContainer" class="modal-buttons"></div>
+        <div class="chart-container">
+            <h4 style="margin:0; font-size:14px; text-align:center; padding-bottom:10px;">Allocation</h4>
+            <div class="chart-wrapper">
+                <canvas id="allocationChart"></canvas>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -125,7 +154,8 @@
         storageBucket: "my-crypto-portfolio-98e37.firebasestorage.app",
         databaseURL: "https://my-crypto-portfolio-98e37-default-rtdb.firebaseio.com/",
         messagingSenderId: "186953471395",
-        appId: "1:186953471395:web:f1135450c5a7ffbdcd7616"
+        appId: "1:186953471395:web:f1135450c5a7ffbdcd7616",
+        measurementId: "G-C56LZE9K04"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -133,44 +163,44 @@
     const auth = firebase.auth();
     const provider = new firebase.auth.GoogleAuthProvider();
 
-    let trades = [], historyStack = [], redoStack = [], assetMetadata = {};
-    let usdRates = { usd: 1, aed: 3.67, eur: 0.92, inr: 83.0 }, myChart = null;
+    let trades = []; 
+    let assetMetadata = {}; 
+    let usdRates = { usd: 1, aed: 3.67, eur: 0.92, inr: 83.0 };
+    let sortKey = 'symbol', sortAsc = true, myChart = null;
+    let expandedAssets = new Set();
+    const curMap = { usd: '$', eur: '€', inr: '₹', aed: 'د.إ' };
 
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                startSync(user.uid);
-            }
-        });
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            startSync(user.uid);
+        } else {
+            document.getElementById('auth-screen').style.display = 'flex';
+        }
     });
 
     function login() { auth.signInWithPopup(provider); }
     function logout() { auth.signOut().then(() => location.reload()); }
 
     function startSync(uid) {
-        db.ref('users/' + uid + '/trades').on('value', (s) => {
-            trades = s.val() || [];
+        db.ref('users/' + uid + '/trades').on('value', (snapshot) => {
+            trades = snapshot.val() || [];
             document.getElementById('sync-status').innerText = "● Cloud Synced";
             document.getElementById('sync-status').style.color = "var(--success)";
             fetchPrices(); 
         });
     }
 
-    function saveToCloud(record = true) {
-        if (record) { historyStack.push(JSON.stringify(trades)); redoStack = []; }
+    function saveToCloud() {
         const user = auth.currentUser;
         if (user) db.ref('users/' + user.uid + '/trades').set(trades);
     }
 
-    function undo() { if (historyStack.length) { redoStack.push(JSON.stringify(trades)); trades = JSON.parse(historyStack.pop()); saveToCloud(false); render(); } }
-    function redo() { if (redoStack.length) { historyStack.push(JSON.stringify(trades)); trades = JSON.parse(redoStack.pop()); saveToCloud(false); render(); } }
-
     async function fetchPrices() {
         try {
-            const r = await fetch('https://api.binance.com/api/v3/ticker/24hr');
-            const data = await r.json();
+            const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+            const data = await res.json();
             data.forEach(t => {
                 if (t.symbol.endsWith('USDT')) {
                     const base = t.symbol.replace('USDT', '');
@@ -178,169 +208,186 @@
                 }
             });
             render();
-        } catch(e) {}
-    }
-
-    // EXCEL / CSV HANDLING
-    function handleFile(e) {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            const workbook = XLSX.read(new Uint8Array(f.target.result), {type: 'array'});
-            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-            
-            // FIX: Small delay to ensure mobile keyboard/picker is closed
-            setTimeout(() => {
-                showConfirm("Import Binance Data", "Choose how to handle your trade history:", [
-                    { label: 'Cancel', callback: closeModal },
-                    { label: 'Add to Existing', className: 'btn-refresh', callback: () => { processData(rows, false); closeModal(); } },
-                    { label: 'Overwrite All', className: 'btn-add', callback: () => { processData(rows, true); closeModal(); } }
-                ]);
-            }, 200);
-            e.target.value = ''; 
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    function processData(rows, overwrite) {
-        if (overwrite) { saveToCloud(true); trades = []; } else { saveToCloud(true); }
-        const hIdx = rows.findIndex(r => Array.isArray(r) && r.some(c => String(c).toLowerCase().includes('time')));
-        if (hIdx === -1) return alert("Header 'Time' not found in file.");
-
-        const h = rows[hIdx].map(v => String(v || "").toLowerCase());
-        const tI = h.findIndex(v => v.includes('time')), pI = h.findIndex(v => v.includes('pair')), sI = h.findIndex(v => v.includes('side')), prI = h.findIndex(v => v.includes('price')), eI = h.findIndex(v => v.includes('executed'));
-
-        rows.slice(hIdx + 1).forEach(r => {
-            if (String(r[sI]).toUpperCase() === 'BUY') {
-                const pair = String(r[pI] || "").toUpperCase();
-                const amt = parseFloat(String(r[eI] || "0").replace(/[^\d.]/g, '')) || 0;
-                if (amt > 0) {
-                    trades.push({ id: pair.replace('USDT','').replace('BUSD',''), date: String(r[tI] || "").split(' ')[0], amount: amt, buyPrice: parseFloat(r[prI]) || 0 });
-                }
-            }
-        });
-        saveToCloud(false); render();
-    }
-
-    // MODAL LOGIC - MOBILE OPTIMIZED
-    function showConfirm(title, msg, actions) {
-        const modal = document.getElementById('confirmModal');
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('modalMessage').innerText = msg;
-        const container = document.getElementById('modalBtnContainer');
-        container.innerHTML = '';
-
-        actions.forEach(a => {
-            const b = document.createElement('button');
-            b.innerText = a.label;
-            b.className = `btn ${a.className || 'btn-cancel'}`;
-            // Use both touch and click for maximum compatibility
-            b.addEventListener('click', (e) => {
-                e.preventDefault();
-                a.callback();
-            });
-            container.appendChild(b);
-        });
-
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeModal() { 
-        document.getElementById('confirmModal').style.display = 'none'; 
-        document.body.style.overflow = 'auto';
+        } catch(e) { console.error(e); }
     }
 
     function render() {
         const isGrouped = document.getElementById('groupToggle').checked;
+        const search = document.getElementById('searchInput').value.toLowerCase();
         const cur = document.getElementById('currencySelector').value;
-        const rate = usdRates[cur] || 1, sym = {usd:'$', aed:'د.إ', eur:'€', inr:'₹'}[cur];
+        const sym = curMap[cur] || '$';
+        const rate = usdRates[cur] || 1;
         const tbody = document.getElementById('portfolioBody');
         tbody.innerHTML = '';
         let tInv = 0, tVal = 0, totalDailyPnL = 0, chartData = {};
 
-        const search = document.getElementById('searchInput').value.toLowerCase();
-        
         const processed = trades.map((t, idx) => {
-            const symbol = t.id.toUpperCase();
-            let meta = symbol === 'USDT' ? { price: 1.0, openUTC: 1.0, logo: 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png' } : (assetMetadata[symbol] || { price: 0, openUTC: 0, logo: '' });
+            const symbolKey = t.id.toUpperCase();
+            let meta = symbolKey === 'USDT' ? { price: 1.0, openUTC: 1.0, logo: 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png' } : (assetMetadata[symbolKey] || { price: 0, openUTC: 0, logo: '' });
             const inv = t.amount * (t.buyPrice * rate);
-            const val = t.amount * (meta.price * rate);
+            const cp = meta.price * rate;
+            const val = t.amount * cp;
             totalDailyPnL += (meta.price - meta.openUTC) * t.amount * rate;
-            return { ...t, symbol, currentPrice: meta.price * rate, inv, val, logo: meta.logo, originalIndex: idx };
+            return { ...t, id: symbolKey, currentPrice: cp, inv, val, logo: meta.logo, originalIndex: idx };
         });
 
         const groups = {};
         processed.forEach(t => {
-            if (!groups[t.symbol]) groups[t.symbol] = { symbol: t.symbol, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice };
-            groups[t.symbol].amount += t.amount; groups[t.symbol].inv += t.inv; groups[t.symbol].val += t.val;
+            if (!groups[t.id]) groups[t.id] = { id: t.id, amount: 0, inv: 0, val: 0, logo: t.logo, currentPrice: t.currentPrice, trades: [] };
+            groups[t.id].amount += t.amount; groups[t.id].inv += t.inv; groups[t.id].val += t.val; groups[t.id].trades.push(t);
         });
 
-        Object.values(groups).forEach(g => { tInv += g.inv; tVal += g.val; if(g.val > 0) chartData[g.symbol] = g.val; });
+        Object.values(groups).forEach(g => { tInv += g.inv; tVal += g.val; if(g.val > 0) chartData[g.id] = g.val; });
 
-        let display = isGrouped ? Object.values(groups) : processed;
-        display.filter(d => d.symbol.toLowerCase().includes(search)).forEach(d => {
-            const pnl = d.val - d.inv, pnlP = d.inv > 0 ? (pnl/d.inv*100) : 0;
-            tbody.innerHTML += `<tr>
-                <td><img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'">${d.symbol}</td>
-                <td>${sym}${d.currentPrice.toLocaleString()}</td>
+        let displayData = isGrouped ? Object.values(groups).map(g => ({ ...g, symbol: g.id, pnl: g.val - g.inv, pnlPct: g.inv > 0 ? (g.val - g.inv)/g.inv*100 : 0 })) : processed.map(t => ({ ...t, symbol: t.id, pnl: t.val - t.inv, pnlPct: t.inv > 0 ? (t.val - t.inv)/t.inv*100 : 0 }));
+
+        displayData.filter(d => d.symbol.toLowerCase().includes(search)).sort((a,b) => {
+            let valA = a[sortKey], valB = b[sortKey];
+            return sortAsc ? (valA < valB ? -1 : 1) : (valA > valB ? -1 : 1);
+        }).forEach(d => {
+            const pClass = d.pnl >= 0 ? 'profit' : 'loss';
+            const isExpanded = expandedAssets.has(d.symbol) && isGrouped;
+            
+            tbody.innerHTML += `<tr class="${isGrouped ? 'group-row' : ''}" onclick="${isGrouped ? `toggleDrillDown('${d.symbol}')` : ''}">
+                <td><div class="asset-cell">${isGrouped ? `<span class="expand-icon">${isExpanded?'▼':'▶'}</span>` : ''}<img class="asset-logo" src="${d.logo}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2585/2585294.png'"><span>${d.symbol}</span></div></td>
+                <td>${sym}${d.currentPrice ? d.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
                 <td>${d.date || '-'}</td>
                 <td>${d.amount.toLocaleString()}</td>
-                <td>${sym}${(d.inv/d.amount || 0).toFixed(4)}</td>
+                <td>${sym}${(d.inv / d.amount || 0).toLocaleString(undefined,{minimumFractionDigits: 2, maximumFractionDigits:4})}</td>
                 <td>${sym}${d.inv.toLocaleString()}</td>
-                <td class="${pnl>=0?'profit':'loss'}">${sym}${pnl.toLocaleString()}</td>
-                <td class="${pnl>=0?'profit':'loss'}">${pnlP.toFixed(2)}%</td>
-                <td><button onclick="removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})" style="color:red; background:none; border:none; font-size:20px; cursor:pointer;">×</button></td>
+                <td class="${pClass}">${sym}${d.pnl.toLocaleString()}</td>
+                <td class="${pClass}">${d.pnlPct.toFixed(2)}%</td>
+                <td class="action-btns">
+                    <button class="btn-edit" onclick="event.stopPropagation(); editTrade(${isGrouped ? -1 : d.originalIndex})">✎</button>
+                    <button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${d.symbol}', ${isGrouped ? -1 : d.originalIndex})">×</button>
+                </td>
             </tr>`;
+            
+            if (isExpanded) {
+                d.trades.forEach(t => {
+                    const rowPnl = t.val - t.inv;
+                    tbody.innerHTML += `<tr class="drill-down-row"><td style="padding-left:35px">↳ Entry</td><td>${sym}${t.currentPrice.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td>${t.date}</td><td>${t.amount.toLocaleString()}</td><td>${sym}${t.buyPrice.toFixed(2)}</td><td>${sym}${t.inv.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${sym}${rowPnl.toLocaleString()}</td><td class="${rowPnl>=0?'profit':'loss'}">${(t.inv>0?rowPnl/t.inv*100:0).toFixed(2)}%</td><td class="action-btns"><button class="btn-edit" onclick="event.stopPropagation(); editTrade(${t.originalIndex})">✎</button><button class="btn-remove" onclick="event.stopPropagation(); removeTrade('${t.id}', ${t.originalIndex})">×</button></td></tr>`;
+                });
+            }
         });
 
         document.getElementById('totalInvested').innerText = sym + Math.round(tInv).toLocaleString();
         document.getElementById('totalValue').innerText = sym + Math.round(tVal).toLocaleString();
-        const growth = tVal - tInv;
-        document.getElementById('totalGrowth').innerText = (tInv > 0 ? (growth/tInv*100).toFixed(2) : 0) + '%';
-        document.getElementById('totalGrowthAmount').innerText = (growth >= 0 ? '+' : '') + sym + Math.round(growth).toLocaleString();
-        document.getElementById('totalGrowthAmount').className = growth >= 0 ? 'profit' : 'loss';
-        
+        const growthTotal = tVal - tInv;
+        document.getElementById('totalGrowth').innerText = (tInv > 0 ? (growthTotal / tInv * 100).toFixed(2) : 0) + '%';
+        document.getElementById('totalGrowthAmount').innerText = (growthTotal >= 0 ? '+' : '') + sym + Math.round(growthTotal).toLocaleString();
+        document.getElementById('totalGrowthAmount').className = growthTotal >= 0 ? 'profit' : 'loss';
         const dpnl = document.getElementById('dailyPnL');
         dpnl.innerText = (totalDailyPnL >= 0 ? '+' : '') + sym + Math.round(totalDailyPnL).toLocaleString();
         dpnl.className = totalDailyPnL >= 0 ? 'profit' : 'loss';
         document.getElementById('dailyPnLPercent').innerText = (tVal > 0 ? (totalDailyPnL / tVal * 100).toFixed(2) : 0) + '%';
-
-        updateChart(Object.keys(chartData), Object.values(chartData));
+        updateChart(Object.keys(chartData).map(k => `${k} (${(chartData[k]/tVal*100).toFixed(1)}%)`), Object.values(chartData));
     }
 
+    function toggleDrillDown(symbol) { if (expandedAssets.has(symbol)) expandedAssets.delete(symbol); else expandedAssets.add(symbol); render(); }
+    function saveUsdtP2P() {
+        const amt = parseFloat(document.getElementById('holdings').value);
+        const date = document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0];
+        const editIdx = parseInt(document.getElementById('editIndex').value);
+        if (isNaN(amt)) return;
+        const tradeData = { id: 'USDT', amount: amt, buyPrice: 1.0, date: date };
+        if (editIdx > -1) trades[editIdx] = tradeData; else trades.push(tradeData);
+        saveToCloud(); resetForm();
+    }
+
+    function resetForm() {
+        document.getElementById('holdings').value = ''; document.getElementById('tradeDate').value = '';
+        document.getElementById('editIndex').value = "-1"; document.getElementById('submitBtn').innerText = "Save USDT"; document.getElementById('cancelBtn').style.display = "none";
+    }
+
+    function importCSV(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            const rows = f.target.result.split('\n');
+            showConfirm("Import CSV", "How to handle import?", [
+                { label: 'Cancel' },
+                { label: 'Add', className: 'btn-refresh', callback: () => { processCSV(rows, false); closeModal(); } },
+                { label: 'Overwrite', className: 'btn-add', callback: () => { processCSV(rows, true); closeModal(); } }
+            ]);
+            e.target.value = ''; 
+        };
+        reader.readAsText(file);
+    }
+
+    function processCSV(rows, overwrite) {
+        if (overwrite) trades = [];
+        const h = rows[0].split(',');
+        const dIdx = h.findIndex(x => x.includes('Date')), sIdx = h.findIndex(x => x.includes('Base Asset')), aIdx = h.findIndex(x => x.includes('Filled')), pIdx = h.findIndex(x => x.includes('AvgTrading Price')), tIdx = h.findIndex(x => x.includes('Type'));
+        rows.slice(1).forEach(row => {
+            const c = row.split(',');
+            if(c.length > 5 && c[tIdx]?.includes('BUY')) trades.push({ id: c[sIdx].trim().toUpperCase(), date: c[dIdx]?.split(' ')[0] || '', amount: parseFloat(c[aIdx]) || 0, buyPrice: parseFloat(c[pIdx]) || 0 });
+        });
+        saveToCloud();
+    }
+
+    // FIXED CHART SETTINGS FOR LAPTOP VISIBILITY
     function updateChart(l, v) {
         if (myChart) myChart.destroy();
         const ctx = document.getElementById('allocationChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'doughnut', 
-            data: { labels: l, datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            data: { 
+                labels: l, 
+                datasets: [{ data: v, backgroundColor: ['#0064e6','#28a745','#dc3545','#ffc107','#17a2b8','#6610f2','#e83e8c'], borderWidth: 0 }] 
+            },
+            options: { 
+                responsive: true,
+                maintainAspectRatio: false, // Forces chart to respect .chart-wrapper height
+                cutout: '65%', 
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } 
+            }
         });
     }
 
-    function saveUsdtP2P() {
-        const amt = parseFloat(document.getElementById('holdings').value);
-        if (isNaN(amt)) return;
-        trades.push({ id: 'USDT', amount: amt, buyPrice: 1.0, date: document.getElementById('tradeDate').value || new Date().toISOString().split('T')[0] });
-        saveToCloud();
-        document.getElementById('holdings').value = '';
+    function showConfirm(title, message, actions) {
+        const modal = document.getElementById('confirmModal');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalMessage').innerText = message;
+        const container = document.getElementById('modalBtnContainer');
+        container.innerHTML = '';
+        actions.forEach(a => {
+            const b = document.createElement('button');
+            b.innerText = a.label; b.className = `btn ${a.className || 'btn-cancel'}`;
+            b.onclick = () => { if (a.callback) a.callback(); };
+            container.appendChild(b);
+        });
+        modal.style.display = 'flex';
     }
-
-    function removeTrade(id, idx) {
-        if (idx === -1) trades = trades.filter(t => t.id !== id); else trades.splice(idx, 1);
-        saveToCloud();
-    }
-
+    function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
     function toggleTheme() {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme-preference', next);
+        render();
     }
-    
+    function removeTrade(id, index) {
+        showConfirm("Delete Entry", `Delete ${id}?`, [{ label: 'Cancel', callback: closeModal }, { label: 'Confirm', className: 'btn-add', callback: () => {
+            if (index === -1) trades = trades.filter(t => t.id !== id); else trades.splice(index, 1);
+            saveToCloud(); closeModal();
+        }}]);
+    }
+    function setSort(key) { if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; } render(); }
     function exportCSV() {
         let csv = "Date,Asset,Holdings,AvgTrading Price (USD)\n" + trades.map(t => `${t.date},${t.id},${t.amount},${t.buyPrice}`).join('\n');
-        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio.csv'; a.click();
+        const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'portfolio_export.csv'; a.click();
+    }
+    function editTrade(idx) {
+        if (idx === -1) return;
+        const t = trades[idx];
+        if (t.id === 'USDT') {
+            document.getElementById('holdings').value = t.amount;
+            document.getElementById('tradeDate').value = t.date;
+            document.getElementById('editIndex').value = idx;
+            document.getElementById('submitBtn').innerText = "Update USDT";
+            document.getElementById('cancelBtn').style.display = "block";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     }
 </script>
 </body>
